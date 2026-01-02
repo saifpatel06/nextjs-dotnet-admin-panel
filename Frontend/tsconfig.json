@@ -24,6 +24,6 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts"
-, "pages/_app.js", "pages/_document.js", "pages/dashboard.js", "pages/index.js", "pages/login.js", "pages/register.js", "pages/users.js"  ],
+, "pages/_app.js", "pages/_document.js", "pages/dashboard.js", "pages/index.js", "pages/login.js", "pages/register.js", "pages/clients.js"  ],
   "exclude": ["node_modules"]
 }

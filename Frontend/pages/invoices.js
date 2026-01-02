@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Sidebar from '../src/components/Sidebar';
 import styles from '../styles/Invoices.module.css';
 
@@ -10,9 +10,13 @@ const Invoices = ({ initialInvoices }) => {
   const [editingInvoice, setEditingInvoice] = useState(null);
   const [isClient, setIsClient] = useState(false);
 
-  // New states for Delete Modal
+  // Modals States
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [invoiceToDelete, setInvoiceToDelete] = useState(null);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+
+  const invoiceRef = useRef(); // Reference for PDF generation
 
   useEffect(() => {
     setIsClient(true);
@@ -33,6 +37,20 @@ const Invoices = ({ initialInvoices }) => {
     inv.clientName?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // PDF Download Logic
+  const downloadPDF = () => {
+    const html2pdf = require('html2pdf.js');
+    const element = invoiceRef.current;
+    const opt = {
+      margin: 0.5,
+      filename: `Invoice_${selectedInvoice.invoiceNumber}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+    html2pdf().set(opt).from(element).save();
+  };
+
   const handleOpenModal = (invoice = null) => {
     if (invoice) {
       setEditingInvoice(invoice);
@@ -44,7 +62,11 @@ const Invoices = ({ initialInvoices }) => {
     setShowModal(true);
   };
 
-  // Triggered when user clicks the red Delete button in the table
+  const handleViewInvoice = (invoice) => {
+    setSelectedInvoice(invoice);
+    setViewModalOpen(true);
+  };
+
   const confirmDelete = (invoice) => {
     setInvoiceToDelete(invoice);
     setDeleteModalOpen(true);
@@ -138,8 +160,8 @@ const Invoices = ({ initialInvoices }) => {
                           {isClient ? new Date(inv.dueDate).toLocaleDateString() : ""}
                         </td>
                         <td className="text-end pe-4">
+                          <button className="btn btn-sm btn-outline-info me-2" onClick={() => handleViewInvoice(inv)}>View</button>
                           <button className="btn btn-sm btn-outline-primary me-2" onClick={() => handleOpenModal(inv)}>Edit</button>
-                          {/* Updated button to trigger new modal */}
                           <button className="btn btn-sm btn-outline-danger" onClick={() => confirmDelete(inv)}>Delete</button>
                         </td>
                       </tr>
@@ -152,7 +174,80 @@ const Invoices = ({ initialInvoices }) => {
         </main>
       </div>
 
-      {/* Main Edit/Create Modal */}
+      {/* VIEW & PDF DOWNLOAD MODAL */}
+      {viewModalOpen && selectedInvoice && (
+        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+          <div className="modal-dialog modal-lg modal-dialog-centered">
+            <div className="modal-content border-0 shadow">
+              <div className="modal-header border-0 pb-0">
+                <h5 className="modal-title fw-bold ms-3 mt-2">Invoice Preview</h5>
+                <button type="button" className="btn-close" onClick={() => setViewModalOpen(false)}></button>
+              </div>
+              <div className="modal-body p-5">
+                {/* PDF TEMPLATE AREA */}
+                <div ref={invoiceRef} className="p-4 bg-white" style={{ color: '#333' }}>
+                  <div className="d-flex justify-content-between mb-5 border-bottom pb-4">
+                    <div>
+                      <h1 className="fw-bold text-primary mb-0">INVOICE</h1>
+                      <p className="text-muted">No: {selectedInvoice.invoiceNumber}</p>
+                    </div>
+                    <div className="text-end">
+                      <h4 className="fw-bold mb-0">YOUR BUSINESS NAME</h4>
+                      <p className="small text-muted mb-0">support@yourbusiness.com</p>
+                      <p className="small text-muted">www.yourbusiness.com</p>
+                    </div>
+                  </div>
+
+                  <div className="row mb-5">
+                    <div className="col-6">
+                      <p className="text-muted small text-uppercase fw-bold mb-1">Billed To</p>
+                      <h5 className="fw-bold">{selectedInvoice.clientName}</h5>
+                    </div>
+                    <div className="col-6 text-end">
+                      <p className="text-muted small text-uppercase fw-bold mb-1">Due Date</p>
+                      <h5 className="fw-bold">{new Date(selectedInvoice.dueDate).toLocaleDateString()}</h5>
+                    </div>
+                  </div>
+
+                  <table className="table table-bordered mb-4">
+                    <thead className="table-light">
+                      <tr>
+                        <th>Description</th>
+                        <th className="text-end" style={{ width: '150px' }}>Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td className="py-3">Professional Services - {selectedInvoice.invoiceNumber}</td>
+                        <td className="text-end py-3">${selectedInvoice.amount.toFixed(2)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  <div className="row justify-content-end">
+                    <div className="col-4 text-end">
+                      <div className="d-flex justify-content-between mb-2">
+                        <span className="text-muted">Subtotal:</span>
+                        <span>${selectedInvoice.amount.toFixed(2)}</span>
+                      </div>
+                      <div className="d-flex justify-content-between fw-bold border-top pt-2">
+                        <span className="text-primary">Grand Total:</span>
+                        <span className="text-primary">${selectedInvoice.amount.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer bg-light border-0">
+                <button className="btn btn-secondary px-4" onClick={() => setViewModalOpen(false)}>Close</button>
+                <button className="btn btn-primary px-4" onClick={downloadPDF}>Download PDF</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT MODAL (REMAINING UNCHANGED) */}
       {showModal && (
         <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog modal-dialog-centered">
@@ -203,23 +298,16 @@ const Invoices = ({ initialInvoices }) => {
         </div>
       )}
 
-      {/* NEW: Delete Confirmation Modal */}
+      {/* DELETE MODAL (REMAINING UNCHANGED) */}
       {deleteModalOpen && (
         <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
           <div className="modal-dialog modal-dialog-centered modal-sm">
-            <div className="modal-content border-0 shadow">
-              <div className="modal-body text-center p-4">
-                <div className="mb-3 text-danger">
-                  <i className="bi bi-exclamation-octagon" style={{ fontSize: '3rem' }}></i>
-                </div>
-                <h5 className="mb-2">Are you sure?</h5>
-                <p className="text-muted small">
-                  You are about to delete invoice <strong>{invoiceToDelete?.invoiceNumber}</strong>. This action cannot be undone.
-                </p>
-                <div className="d-flex justify-content-center gap-2 mt-4">
-                  <button className="btn btn-light px-3" onClick={() => setDeleteModalOpen(false)}>Cancel</button>
-                  <button className="btn btn-danger px-3" onClick={handleDelete}>Delete Now</button>
-                </div>
+            <div className="modal-content border-0 shadow text-center p-4">
+              <h5 className="mb-2">Are you sure?</h5>
+              <p className="text-muted small">Delete invoice <strong>{invoiceToDelete?.invoiceNumber}</strong>?</p>
+              <div className="d-flex justify-content-center gap-2 mt-4">
+                <button className="btn btn-light px-3" onClick={() => setDeleteModalOpen(false)}>Cancel</button>
+                <button className="btn btn-danger px-3" onClick={handleDelete}>Delete Now</button>
               </div>
             </div>
           </div>
