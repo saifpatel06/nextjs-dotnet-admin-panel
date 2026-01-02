@@ -3,6 +3,7 @@ using System;
 using AdminPanelAPI.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AdminPanelAPI.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260102120251_AddInvoicesTable")]
+    partial class AddInvoicesTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.1");
@@ -98,8 +101,9 @@ namespace AdminPanelAPI.Migrations
 
             modelBuilder.Entity("AdminPanelAPI.Models.Invoice", b =>
                 {
-                    b.Property<string>("InvoiceNumber")
-                        .HasColumnType("TEXT");
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
 
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18,2)");
@@ -114,11 +118,15 @@ namespace AdminPanelAPI.Migrations
                     b.Property<DateTime>("DueDate")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("InvoiceNumber")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.HasKey("InvoiceNumber");
+                    b.HasKey("Id");
 
                     b.ToTable("Invoices");
                 });

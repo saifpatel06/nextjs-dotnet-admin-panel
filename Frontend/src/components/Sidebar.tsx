@@ -8,7 +8,8 @@ import styles from '../../styles/Sidebar.module.css';
 const Sidebar = ({ isOpen, activePage }: SidebarProps) => {
   const menuItems = [
     { name: 'Dashboard', icon: '📊', path: '/dashboard' },
-    { name: 'Users', icon: '👥', path: '/users' }
+    { name: 'Users', icon: '👥', path: '/users' },
+    { name: 'Invoices', icon: '📋', path: '/invoices' },
   ];
 
   return (
