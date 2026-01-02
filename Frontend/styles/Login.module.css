@@ -1,0 +1,35 @@
+.loginContainer {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+}
+
+.loginCard {
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  border: none;
+  border-radius: 15px;
+  overflow: hidden;
+}
+
+.loginTitle {
+  color: #333;
+  font-weight: 700;
+  font-size: 28px;
+}
+
+.registerLink {
+  font-size: 14px;
+  color: #666;
+}
+
+.registerLink a {
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.registerLink a:hover {
+  text-decoration: underline;
+}

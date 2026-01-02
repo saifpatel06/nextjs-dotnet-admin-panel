@@ -1,0 +1,5 @@
+@AdminPanelAPI_HostAddress = http://localhost:5085
+
+###
+//Get all users
+GET {{AdminPanelAPI_HostAddress}}/api/Auth/users
