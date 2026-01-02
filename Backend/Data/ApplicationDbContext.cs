@@ -10,16 +10,17 @@ namespace AdminPanelAPI.Data
         {
         }
 
-        public DbSet<User> Users { get; set; }
+        public DbSet<Admin> Admins { get; set; }
+        public DbSet<Client> Clients { get; set; }
 
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {
-            base.OnModelCreating(modelBuilder);
+        // protected override void OnModelCreating(ModelBuilder modelBuilder)
+        // {
+        //     base.OnModelCreating(modelBuilder);
 
-            // Create unique index on Email
-            modelBuilder.Entity<User>()
-                .HasIndex(u => u.Email)
-                .IsUnique();
-        }
+        //     // Create unique index on Email
+        //     modelBuilder.Entity<Admin>()
+        //         .HasIndex(u => u.Email)
+        //         .IsUnique();
+        // }
     }
 }

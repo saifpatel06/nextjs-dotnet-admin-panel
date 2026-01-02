@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace AdminPanelAPI.Models
 {
-    public class User
+    public class Admin
     {
         [Key]
         public int Id { get; set; }
@@ -21,7 +21,7 @@ namespace AdminPanelAPI.Models
         public string PasswordHash { get; set; } = string.Empty;
 
         [MaxLength(50)]
-        public string Role { get; set; } = "User";
+        public string Role { get; set; } = "Admin";
 
         [MaxLength(20)]
         public string Status { get; set; } = "Active";

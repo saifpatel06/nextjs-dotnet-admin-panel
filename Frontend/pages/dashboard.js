@@ -6,7 +6,7 @@ import styles from '../styles/Dashboard.module.css';
 const Dashboard = () => {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     // 1. Check if user is logged in

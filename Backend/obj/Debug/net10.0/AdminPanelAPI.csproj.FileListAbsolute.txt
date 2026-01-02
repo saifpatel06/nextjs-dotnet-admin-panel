@@ -488,3 +488,4 @@ D:\Saif Work\Learnings\Template\fullstack-admin-portal\Backend\obj\Debug\net10.0
 D:\Saif Work\Learnings\Template\fullstack-admin-portal\Backend\obj\Debug\net10.0\AdminPanelAPI.pdb
 D:\Saif Work\Learnings\Template\fullstack-admin-portal\Backend\obj\Debug\net10.0\AdminPanelAPI.genruntimeconfig.cache
 D:\Saif Work\Learnings\Template\fullstack-admin-portal\Backend\obj\Debug\net10.0\ref\AdminPanelAPI.dll
+D:\Saif Work\Learnings\Template\fullstack-admin-portal\Backend\obj\Debug\net10.0\AdminPanelAPI.sourcelink.json

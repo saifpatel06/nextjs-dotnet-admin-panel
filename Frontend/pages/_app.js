@@ -1,7 +1,7 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
-import type { AppProps } from 'next/app';
 
-const App = ({ Component, pageProps }: AppProps) => {
+// Remove "type" imports and the ": AppProps" type definition
+const App = ({ Component, pageProps }) => {
   return <Component {...pageProps} />;
 };
 

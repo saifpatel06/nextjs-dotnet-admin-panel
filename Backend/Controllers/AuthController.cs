@@ -23,52 +23,50 @@ namespace AdminPanelAPI.Controllers
         {
             try
             {
-                // Check if email already exists
-                var existingUser = await _context.Users
+                // Check if email already exists in ADMINS table
+                var existingAdmin = await _context.Admins
                     .FirstOrDefaultAsync(u => u.Email.ToLower() == registerDto.Email.ToLower());
 
-                if (existingUser != null)
+                if (existingAdmin != null)
                 {
                     return BadRequest(new ApiResponse<UserResponseDto>
                     {
                         Success = false,
                         Message = "Email already registered",
-                        Errors = new List<string> { "A user with this email already exists" }
+                        Errors = new List<string> { "An admin with this email already exists" }
                     });
                 }
 
-                // Hash the password
                 var passwordHash = BCrypt.Net.BCrypt.HashPassword(registerDto.Password);
 
-                // Create new user
-                var user = new User
+                var admin = new Admin
                 {
                     Name = registerDto.Name,
                     Email = registerDto.Email.ToLower(),
                     PasswordHash = passwordHash,
-                    Role = "User",
+                    Role = "Admin",
                     Status = "Active",
                     CreatedAt = DateTime.UtcNow
                 };
 
-                _context.Users.Add(user);
+                // Saving to Admins table
+                _context.Admins.Add(admin);
                 await _context.SaveChangesAsync();
 
-                // Return user response (without password)
                 var userResponse = new UserResponseDto
                 {
-                    Id = user.Id,
-                    Name = user.Name,
-                    Email = user.Email,
-                    Role = user.Role,
-                    Status = user.Status,
-                    CreatedAt = user.CreatedAt
+                    Id = admin.Id,
+                    Name = admin.Name,
+                    Email = admin.Email,
+                    Role = admin.Role,
+                    Status = admin.Status,
+                    CreatedAt = admin.CreatedAt
                 };
 
                 return CreatedAtAction(nameof(Register), new ApiResponse<UserResponseDto>
                 {
                     Success = true,
-                    Message = "User registered successfully",
+                    Message = "Admin registered successfully",
                     Data = userResponse
                 });
             }
@@ -77,7 +75,7 @@ namespace AdminPanelAPI.Controllers
                 return StatusCode(500, new ApiResponse<UserResponseDto>
                 {
                     Success = false,
-                    Message = "An error occurred while registering user",
+                    Message = "An error occurred while registering admin",
                     Errors = new List<string> { ex.Message }
                 });
             }
@@ -89,13 +87,11 @@ namespace AdminPanelAPI.Controllers
         {
             try
             {
-                // 1. Find user by email
-                var user = await _context.Users
+                // Find admin in ADMINS table
+                var admin = await _context.Admins
                     .FirstOrDefaultAsync(u => u.Email.ToLower() == loginDto.Email.ToLower());
 
-                // 2. Check if user exists and verify password
-                // BCrypt.Verify compares the plain text password with the stored hash
-                if (user == null || !BCrypt.Net.BCrypt.Verify(loginDto.Password, user.PasswordHash))
+                if (admin == null || !BCrypt.Net.BCrypt.Verify(loginDto.Password, admin.PasswordHash))
                 {
                     return Unauthorized(new ApiResponse<UserResponseDto>
                     {
@@ -104,15 +100,14 @@ namespace AdminPanelAPI.Controllers
                     });
                 }
 
-                // 3. Map to Response DTO
                 var userResponse = new UserResponseDto
                 {
-                    Id = user.Id,
-                    Name = user.Name,
-                    Email = user.Email,
-                    Role = user.Role,
-                    Status = user.Status,
-                    CreatedAt = user.CreatedAt
+                    Id = admin.Id,
+                    Name = admin.Name,
+                    Email = admin.Email,
+                    Role = admin.Role,
+                    Status = admin.Status,
+                    CreatedAt = admin.CreatedAt
                 };
 
                 return Ok(new ApiResponse<UserResponseDto>
@@ -128,42 +123,6 @@ namespace AdminPanelAPI.Controllers
                 {
                     Success = false,
                     Message = "An error occurred during login",
-                    Errors = new List<string> { ex.Message }
-                });
-            }
-        }
-
-        // GET: api/Auth/users (Get all users for testing)
-        [HttpGet("users")]
-        public async Task<ActionResult<ApiResponse<List<UserResponseDto>>>> GetUsers()
-        {
-            try
-            {
-                var users = await _context.Users
-                    .Select(u => new UserResponseDto
-                    {
-                        Id = u.Id,
-                        Name = u.Name,
-                        Email = u.Email,
-                        Role = u.Role,
-                        Status = u.Status,
-                        CreatedAt = u.CreatedAt
-                    })
-                    .ToListAsync();
-
-                return Ok(new ApiResponse<List<UserResponseDto>>
-                {
-                    Success = true,
-                    Message = "Users retrieved successfully",
-                    Data = users
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new ApiResponse<List<UserResponseDto>>
-                {
-                    Success = false,
-                    Message = "An error occurred while retrieving users",
                     Errors = new List<string> { ex.Message }
                 });
             }
