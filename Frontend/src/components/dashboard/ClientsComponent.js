@@ -53,7 +53,10 @@ const ClientsComponent = ({ user, initialClients }) => {
     try {
       const response = await fetch(finalUrl, {
         method: method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        },
         body: JSON.stringify(formData),
       });
 
@@ -75,7 +78,12 @@ const ClientsComponent = ({ user, initialClients }) => {
     try {
       const response = await fetch(`http://localhost:5085/api/Clients/${deletingClientId}`, {
         method: 'DELETE',
+        headers: {
+        'Authorization': `Bearer ${user.token}`,
+        'Content-Type': 'application/json'
+      }
       });
+
       const result = await response.json();
       if (result.success) {
         setClients(clients.filter(c => c.id !== deletingClientId));

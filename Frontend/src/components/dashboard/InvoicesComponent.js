@@ -74,7 +74,15 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
   const handleDelete = async () => {
     if (!invoiceToDelete) return;
     try {
-      const res = await fetch(`http://localhost:5085/api/Invoices/${invoiceToDelete.invoiceNumber}`, { method: 'DELETE' });
+      const res = await fetch(`http://localhost:5085/api/Invoices/${invoiceToDelete.invoiceNumber}`, 
+        { 
+          method: 'DELETE', 
+          headers: 
+          { 
+            'Authorization': `Bearer ${user.token}` 
+          } 
+        }
+      );
       const result = await res.json();
       if (result.success) {
         setInvoices(invoices.filter(inv => inv.invoiceNumber !== invoiceToDelete.invoiceNumber));
@@ -93,7 +101,10 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
     try {
       const response = await fetch(finalUrl, {
         method: method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        },
         body: JSON.stringify(formData),
       });
       const result = await response.json();
