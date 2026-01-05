@@ -77,8 +77,13 @@ const Login = () => {
                   </button>
                 </form>
                 <div className="text-center mt-3">
-                  <span>Don't have an account? </span>
-                  <Link href="/register">Register here</Link>
+                  <p className="mb-1">
+                    For testing, use email <strong>test@test.com</strong> and password <strong>Test@123</strong>
+                  </p>
+                  <p className="mb-0">
+                    Don&apos;t have an account?{" "}
+                    <Link href="/register">Register here</Link>
+                  </p>
                 </div>
               </div>
             </div>
