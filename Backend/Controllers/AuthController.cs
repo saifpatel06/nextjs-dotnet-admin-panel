@@ -108,7 +108,7 @@ namespace AdminPanelAPI.Controllers
                     Role = admin.Role,
                     Status = admin.Status,
                     CreatedAt = admin.CreatedAt,
-                    Token = token // This token will be stored in your Next.js cookies
+                    Token = token 
                 };
 
                 return Ok(new ApiResponse<UserResponseDto>
@@ -127,10 +127,10 @@ namespace AdminPanelAPI.Controllers
         // Helper Method to generate the JWT
         private string GenerateJwtToken(Admin admin)
         {
-            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
+            var jwtKey = _configuration["Jwt:Key"] ?? ""; 
+            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
-            // Claims are the pieces of data stored inside the token
             var claims = new[]
             {
                 new Claim(JwtRegisteredClaimNames.Sub, admin.Email),
@@ -144,7 +144,7 @@ namespace AdminPanelAPI.Controllers
                 issuer: _configuration["Jwt:Issuer"],
                 audience: _configuration["Jwt:Audience"],
                 claims: claims,
-                expires: DateTime.Now.AddDays(7), // Token valid for 7 days
+                expires: DateTime.Now.AddDays(7), 
                 signingCredentials: credentials);
 
             return new JwtSecurityTokenHandler().WriteToken(token);
