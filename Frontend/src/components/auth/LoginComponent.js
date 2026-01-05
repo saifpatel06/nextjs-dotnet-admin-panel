@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/router';
 import styles from '../../../styles/Login.module.css'; 
 import Link from 'next/link';
+import Cookies from 'universal-cookie';
+import { setCookie } from 'nookies';
 
 const LoginComponent = () => {
   const router = useRouter();
@@ -9,6 +11,8 @@ const LoginComponent = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const cookies = new Cookies();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -25,9 +29,14 @@ const LoginComponent = () => {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        // Store user data in localStorage
-        localStorage.setItem('user', JSON.stringify(data.data));
-        // Redirect to the dashboard folder
+
+        const userData = data.data;
+
+        setCookie(null, 'user_session', JSON.stringify(userData), {
+          maxAge: 30 * 24 * 60 * 60, // 30 days
+          path: '/',
+        });
+        console.log('Login successful:', userData);
         router.push('/dashboard');
       } else {
         setError(data.message || 'Invalid login credentials');

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Sidebar from '../layout/Sidebar';
 import styles from '../../../styles/Users.module.css';
 
-const ClientsComponent = ({ initialClients }) => {
+const ClientsComponent = ({ user, initialClients }) => {
   const [clients, setClients] = useState(initialClients || []);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');

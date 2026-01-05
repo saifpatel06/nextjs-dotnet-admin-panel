@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import Sidebar from '../layout/Sidebar';
 import styles from '../../../styles/Invoices.module.css';
 
-const InvoicesComponent = ({ initialInvoices }) => {
+const InvoicesComponent = ({ user, initialInvoices }) => {
   const [invoices, setInvoices] = useState(initialInvoices || []);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');

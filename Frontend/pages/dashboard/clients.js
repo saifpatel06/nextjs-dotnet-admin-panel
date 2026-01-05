@@ -1,50 +1,52 @@
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
 import Head from 'next/head';
+import nookies from 'nookies';
 import ClientsComponent from '../../src/components/dashboard/ClientsComponent';
 
-export default function ClientsPage({ initialClients }) {
-  const router = useRouter();
-  const [authenticated, setAuthenticated] = useState(false);
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (!storedUser) {
-      router.push('/auth/login');
-    } else {
-      setAuthenticated(true);
-    }
-  }, [router]);
-
-  if (!authenticated) {
-    return (
-      <div className="d-flex justify-content-center align-items-center vh-100">
-        <div className="spinner-border text-primary" role="status"></div>
-      </div>
-    );
-  }
-
+const ClientsPage = ({ user, initialClients }) => {
   return (
     <>
       <Head>
-        <title>Clients</title>
+        <title>Clients | Admin Panel</title>
       </Head>
-      <ClientsComponent initialClients={initialClients} />
+      <ClientsComponent user={user} initialClients={initialClients} />
     </>
   );
-}
+};
 
-export async function getServerSideProps() {
+export const getServerSideProps = async (ctx) => {
+  const cookies = nookies.get(ctx);
+
+  if (!cookies.user_session) {
+    return {
+      redirect: {
+        destination: '/auth/login',
+        permanent: false,
+      },
+    };
+  }
+
   try {
+    const user = JSON.parse(cookies.user_session);
+
     const response = await fetch('http://localhost:5085/api/Clients');
     const result = await response.json();
-    return { 
+
+    return {
       props: { 
+        user, 
         initialClients: result.success ? result.data : [] 
-      } 
+      }
     };
   } catch (error) {
     console.error("Server Fetch Error:", error);
-    return { props: { initialClients: [] } };
+    
+    return {
+      redirect: {
+        destination: '/auth/login',
+        permanent: false,
+      },
+    };
   }
-}
+};
+
+export default ClientsPage;

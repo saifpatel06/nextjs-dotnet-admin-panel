@@ -24,6 +24,6 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts"
-, "pages/_app.js", "pages/_document.js", "pages/dashboard/index.js", "pages/index.js", "pages/auth/login.jpages/auth/register.jser.js", "pages/dashboard/clients.js"  ],
+, "pages/_app.js", "pages/_document.js", "pages/dashboard/index.js", "pages/index.js", "pages/auth/login.jpages/auth/register.jser.js", "pages/dashboard/clients.js", "src/components/layout/Sidebar.js"  ],
   "exclude": ["node_modules"]
 }
