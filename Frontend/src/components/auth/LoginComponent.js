@@ -33,7 +33,7 @@ const LoginComponent = () => {
         const userData = data.data;
 
         setCookie(null, 'user_session', JSON.stringify(userData), {
-          maxAge: 30 * 24 * 60 * 60, // 30 days
+          maxAge: 30 * 24 * 60 * 60,
           path: '/',
         });
         console.log('Login successful:', userData);

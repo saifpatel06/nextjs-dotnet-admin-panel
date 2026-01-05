@@ -18,17 +18,25 @@ export const getServerSideProps = async (ctx) => {
 
   if (!cookies.user_session) {
     return {
-      redirect: {
-        destination: '/auth/login',
-        permanent: false,
-      },
+      redirect: { destination: '/auth/login', permanent: false },
     };
   }
 
   try {
     const user = JSON.parse(cookies.user_session);
 
-    const response = await fetch('http://localhost:5085/api/Clients');
+    const response = await fetch('http://localhost:5085/api/Clients', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${user.token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (response.status === 401) {
+       return { redirect: { destination: '/auth/login', permanent: false } };
+    }
+    
     const result = await response.json();
 
     return {

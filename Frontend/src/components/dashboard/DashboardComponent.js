@@ -7,12 +7,12 @@ const DashboardComponent = ({ user }) => {
 
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
-  const stats = [
-    { title: 'Total Invoices', value: '128', icon: '📄', color: 'primary' },
-    { title: 'Revenue', value: '$45,678', icon: '💰', color: 'success' },
-    { title: 'Pending', value: '12', icon: '⏳', color: 'warning' },
-    { title: 'Active Clients', value: '84', icon: '👥', color: 'info' }
-  ];
+  // const stats = [
+  //   { title: 'Total Invoices', value: '128', icon: '📄', color: 'primary' },
+  //   { title: 'Revenue', value: '$45,678', icon: '💰', color: 'success' },
+  //   { title: 'Pending', value: '12', icon: '⏳', color: 'warning' },
+  //   { title: 'Active Clients', value: '84', icon: '👥', color: 'info' }
+  // ];
 
   return (
     <div className={styles.dashboardWrapper}>
@@ -34,7 +34,7 @@ const DashboardComponent = ({ user }) => {
         </header>
 
         <main className={styles.content}>
-          <div className="row mb-4">
+          {/* <div className="row mb-4">
             {stats.map((stat, index) => (
               <div key={index} className="col-12 col-sm-6 col-lg-3 mb-3">
                 <div className={`card shadow-sm border-0 ${styles.statCard}`}>
@@ -51,7 +51,7 @@ const DashboardComponent = ({ user }) => {
                 </div>
               </div>
             ))}
-          </div>
+          </div> */}
 
           <div className="alert alert-white border shadow-sm d-flex align-items-center bg-white p-4">
             <div className="me-3 fs-2">👋</div>
