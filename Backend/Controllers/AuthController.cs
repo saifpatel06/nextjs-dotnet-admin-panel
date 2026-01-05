@@ -3,6 +3,10 @@ using Microsoft.EntityFrameworkCore;
 using AdminPanelAPI.Data;
 using AdminPanelAPI.DTOs;
 using AdminPanelAPI.Models;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 
 namespace AdminPanelAPI.Controllers
 {
@@ -11,10 +15,12 @@ namespace AdminPanelAPI.Controllers
     public class AuthController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IConfiguration _configuration;
 
-        public AuthController(ApplicationDbContext context)
+        public AuthController(ApplicationDbContext context, IConfiguration configuration)
         {
             _context = context;
+            _configuration = configuration;
         }
 
         // POST: api/Auth/register
@@ -23,7 +29,6 @@ namespace AdminPanelAPI.Controllers
         {
             try
             {
-                // Check if email already exists in ADMINS table
                 var existingAdmin = await _context.Admins
                     .FirstOrDefaultAsync(u => u.Email.ToLower() == registerDto.Email.ToLower());
 
@@ -32,8 +37,7 @@ namespace AdminPanelAPI.Controllers
                     return BadRequest(new ApiResponse<UserResponseDto>
                     {
                         Success = false,
-                        Message = "Email already registered",
-                        Errors = new List<string> { "An admin with this email already exists" }
+                        Message = "Email already registered"
                     });
                 }
 
@@ -49,7 +53,6 @@ namespace AdminPanelAPI.Controllers
                     CreatedAt = DateTime.UtcNow
                 };
 
-                // Saving to Admins table
                 _context.Admins.Add(admin);
                 await _context.SaveChangesAsync();
 
@@ -60,7 +63,8 @@ namespace AdminPanelAPI.Controllers
                     Email = admin.Email,
                     Role = admin.Role,
                     Status = admin.Status,
-                    CreatedAt = admin.CreatedAt
+                    CreatedAt = admin.CreatedAt,
+                    Token = GenerateJwtToken(admin) // Optional: Generate token on registration too
                 };
 
                 return CreatedAtAction(nameof(Register), new ApiResponse<UserResponseDto>
@@ -72,22 +76,15 @@ namespace AdminPanelAPI.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ApiResponse<UserResponseDto>
-                {
-                    Success = false,
-                    Message = "An error occurred while registering admin",
-                    Errors = new List<string> { ex.Message }
-                });
+                return StatusCode(500, new ApiResponse<UserResponseDto> { Success = false, Message = ex.Message });
             }
         }
 
-        // POST: api/Auth/login
         [HttpPost("login")]
         public async Task<ActionResult<ApiResponse<UserResponseDto>>> Login(LoginDto loginDto)
         {
             try
             {
-                // Find admin in ADMINS table
                 var admin = await _context.Admins
                     .FirstOrDefaultAsync(u => u.Email.ToLower() == loginDto.Email.ToLower());
 
@@ -100,6 +97,9 @@ namespace AdminPanelAPI.Controllers
                     });
                 }
 
+                // Generate the JWT Token
+                var token = GenerateJwtToken(admin);
+
                 var userResponse = new UserResponseDto
                 {
                     Id = admin.Id,
@@ -107,7 +107,8 @@ namespace AdminPanelAPI.Controllers
                     Email = admin.Email,
                     Role = admin.Role,
                     Status = admin.Status,
-                    CreatedAt = admin.CreatedAt
+                    CreatedAt = admin.CreatedAt,
+                    Token = token // This token will be stored in your Next.js cookies
                 };
 
                 return Ok(new ApiResponse<UserResponseDto>
@@ -119,13 +120,34 @@ namespace AdminPanelAPI.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ApiResponse<UserResponseDto>
-                {
-                    Success = false,
-                    Message = "An error occurred during login",
-                    Errors = new List<string> { ex.Message }
-                });
+                return StatusCode(500, new ApiResponse<UserResponseDto> { Success = false, Message = ex.Message });
             }
+        }
+
+        // Helper Method to generate the JWT
+        private string GenerateJwtToken(Admin admin)
+        {
+            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
+            var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+
+            // Claims are the pieces of data stored inside the token
+            var claims = new[]
+            {
+                new Claim(JwtRegisteredClaimNames.Sub, admin.Email),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                new Claim(ClaimTypes.NameIdentifier, admin.Id.ToString()),
+                new Claim(ClaimTypes.Role, admin.Role),
+                new Claim("Name", admin.Name)
+            };
+
+            var token = new JwtSecurityToken(
+                issuer: _configuration["Jwt:Issuer"],
+                audience: _configuration["Jwt:Audience"],
+                claims: claims,
+                expires: DateTime.Now.AddDays(7), // Token valid for 7 days
+                signingCredentials: credentials);
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
         }
     }
 }

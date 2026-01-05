@@ -3,9 +3,11 @@ using Microsoft.EntityFrameworkCore;
 using AdminPanelAPI.Data;
 using AdminPanelAPI.Models;
 using AdminPanelAPI.DTOs;
+using Microsoft.AspNetCore.Authorization;
 
 namespace AdminPanelAPI.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class ClientsController : ControllerBase

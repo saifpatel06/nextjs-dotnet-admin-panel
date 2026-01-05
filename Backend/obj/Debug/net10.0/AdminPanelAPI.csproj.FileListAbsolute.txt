@@ -301,6 +301,7 @@ D:\Saif Work\Learnings\Template\fullstack-admin-portal\Backend\bin\Debug\net10.0
 D:\Saif Work\Learnings\Template\fullstack-admin-portal\Backend\bin\Debug\net10.0\Azure.Identity.dll
 D:\Saif Work\Learnings\Template\fullstack-admin-portal\Backend\bin\Debug\net10.0\BCrypt.Net-Next.dll
 D:\Saif Work\Learnings\Template\fullstack-admin-portal\Backend\bin\Debug\net10.0\Humanizer.dll
+D:\Saif Work\Learnings\Template\fullstack-admin-portal\Backend\bin\Debug\net10.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
 D:\Saif Work\Learnings\Template\fullstack-admin-portal\Backend\bin\Debug\net10.0\Microsoft.AspNetCore.OpenApi.dll
 D:\Saif Work\Learnings\Template\fullstack-admin-portal\Backend\bin\Debug\net10.0\Microsoft.Bcl.AsyncInterfaces.dll
 D:\Saif Work\Learnings\Template\fullstack-admin-portal\Backend\bin\Debug\net10.0\Microsoft.Bcl.Cryptography.dll
@@ -473,6 +474,7 @@ D:\Saif Work\Learnings\Template\fullstack-admin-portal\Backend\obj\Debug\net10.0
 D:\Saif Work\Learnings\Template\fullstack-admin-portal\Backend\obj\Debug\net10.0\AdminPanelAPI.csproj.CoreCompileInputs.cache
 D:\Saif Work\Learnings\Template\fullstack-admin-portal\Backend\obj\Debug\net10.0\AdminPanelAPI.MvcApplicationPartsAssemblyInfo.cs
 D:\Saif Work\Learnings\Template\fullstack-admin-portal\Backend\obj\Debug\net10.0\AdminPanelAPI.MvcApplicationPartsAssemblyInfo.cache
+D:\Saif Work\Learnings\Template\fullstack-admin-portal\Backend\obj\Debug\net10.0\AdminPanelAPI.sourcelink.json
 D:\Saif Work\Learnings\Template\fullstack-admin-portal\Backend\obj\Debug\net10.0\rjimswa.dswa.cache.json
 D:\Saif Work\Learnings\Template\fullstack-admin-portal\Backend\obj\Debug\net10.0\rjsmrazor.dswa.cache.json
 D:\Saif Work\Learnings\Template\fullstack-admin-portal\Backend\obj\Debug\net10.0\rjsmcshtml.dswa.cache.json
@@ -488,4 +490,3 @@ D:\Saif Work\Learnings\Template\fullstack-admin-portal\Backend\obj\Debug\net10.0
 D:\Saif Work\Learnings\Template\fullstack-admin-portal\Backend\obj\Debug\net10.0\AdminPanelAPI.pdb
 D:\Saif Work\Learnings\Template\fullstack-admin-portal\Backend\obj\Debug\net10.0\AdminPanelAPI.genruntimeconfig.cache
 D:\Saif Work\Learnings\Template\fullstack-admin-portal\Backend\obj\Debug\net10.0\ref\AdminPanelAPI.dll
-D:\Saif Work\Learnings\Template\fullstack-admin-portal\Backend\obj\Debug\net10.0\AdminPanelAPI.sourcelink.json

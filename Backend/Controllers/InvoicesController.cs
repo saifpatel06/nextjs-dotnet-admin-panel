@@ -3,21 +3,30 @@ using Microsoft.EntityFrameworkCore;
 using AdminPanelAPI.Data;
 using AdminPanelAPI.Models;
 using AdminPanelAPI.DTOs;
+using Microsoft.AspNetCore.Authorization;
 
 namespace AdminPanelAPI.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class InvoicesController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
-        public InvoicesController(ApplicationDbContext context) => _context = context;
+        public InvoicesController(ApplicationDbContext context) 
+        {
+            _context = context;
+        }
 
         [HttpGet]
         public async Task<ActionResult<ApiResponse<IEnumerable<Invoice>>>> GetInvoices()
         {
             var data = await _context.Invoices.ToListAsync();
-            return Ok(new ApiResponse<IEnumerable<Invoice>> { Success = true, Data = data });
+            return Ok(new ApiResponse<IEnumerable<Invoice>> 
+            { 
+                Success = true, 
+                Data = data 
+            });
         }
 
         [HttpPost]

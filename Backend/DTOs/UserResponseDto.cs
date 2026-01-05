@@ -10,5 +10,6 @@ namespace AdminPanelAPI.DTOs
         public string Role { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }
+        public string Token { get; set; }
     }
 }
