@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import Sidebar from '../src/components/Sidebar';
-import styles from '../styles/Invoices.module.css';
+import Sidebar from '../layout/Sidebar';
+import styles from '../../../styles/Invoices.module.css';
 
-const Invoices = ({ initialInvoices }) => {
+const InvoicesComponent = ({ initialInvoices }) => {
   const [invoices, setInvoices] = useState(initialInvoices || []);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -16,7 +16,7 @@ const Invoices = ({ initialInvoices }) => {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
 
-  const invoiceRef = useRef(); // Reference for PDF generation
+  const invoiceRef = useRef();
 
   useEffect(() => {
     setIsClient(true);
@@ -37,7 +37,6 @@ const Invoices = ({ initialInvoices }) => {
     inv.clientName?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // PDF Download Logic
   const downloadPDF = () => {
     const html2pdf = require('html2pdf.js');
     const element = invoiceRef.current;
@@ -184,17 +183,15 @@ const Invoices = ({ initialInvoices }) => {
                 <button type="button" className="btn-close" onClick={() => setViewModalOpen(false)}></button>
               </div>
               <div className="modal-body p-5">
-                {/* PDF TEMPLATE AREA */}
                 <div ref={invoiceRef} className="p-4 bg-white" style={{ color: '#333' }}>
                   <div className="d-flex justify-content-between mb-5 border-bottom pb-4">
                     <div>
                       <h1 className="fw-bold text-primary mb-0">INVOICE</h1>
-                      <p className="text-muted">No: {selectedInvoice.invoiceNumber}</p>
+                      <p className="text-muted small">No: {selectedInvoice.invoiceNumber}</p>
                     </div>
                     <div className="text-end">
-                      <h4 className="fw-bold mb-0">YOUR BUSINESS NAME</h4>
-                      <p className="small text-muted mb-0">support@yourbusiness.com</p>
-                      <p className="small text-muted">www.yourbusiness.com</p>
+                      <h4 className="fw-bold mb-0">YOUR BUSINESS</h4>
+                      <p className="small text-muted mb-0">billing@business.com</p>
                     </div>
                   </div>
 
@@ -226,10 +223,6 @@ const Invoices = ({ initialInvoices }) => {
 
                   <div className="row justify-content-end">
                     <div className="col-4 text-end">
-                      <div className="d-flex justify-content-between mb-2">
-                        <span className="text-muted">Subtotal:</span>
-                        <span>${selectedInvoice.amount.toFixed(2)}</span>
-                      </div>
                       <div className="d-flex justify-content-between fw-bold border-top pt-2">
                         <span className="text-primary">Grand Total:</span>
                         <span className="text-primary">${selectedInvoice.amount.toFixed(2)}</span>
@@ -247,7 +240,7 @@ const Invoices = ({ initialInvoices }) => {
         </div>
       )}
 
-      {/* EDIT MODAL (REMAINING UNCHANGED) */}
+      {/* EDIT MODAL */}
       {showModal && (
         <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog modal-dialog-centered">
@@ -298,7 +291,7 @@ const Invoices = ({ initialInvoices }) => {
         </div>
       )}
 
-      {/* DELETE MODAL (REMAINING UNCHANGED) */}
+      {/* DELETE MODAL */}
       {deleteModalOpen && (
         <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
           <div className="modal-dialog modal-dialog-centered modal-sm">
@@ -317,14 +310,4 @@ const Invoices = ({ initialInvoices }) => {
   );
 };
 
-export async function getServerSideProps() {
-  try {
-    const res = await fetch('http://localhost:5085/api/Invoices');
-    const result = await res.json();
-    return { props: { initialInvoices: result.success ? result.data : [] } };
-  } catch {
-    return { props: { initialInvoices: [] } };
-  }
-}
-
-export default Invoices;
+export default InvoicesComponent;

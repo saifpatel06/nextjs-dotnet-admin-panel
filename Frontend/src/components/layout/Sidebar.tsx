@@ -3,13 +3,13 @@ interface SidebarProps {
   activePage: string;
 }
 
-import styles from '../../styles/Sidebar.module.css';
+import styles from '../../../styles/Sidebar.module.css';
 
 const Sidebar = ({ isOpen, activePage }: SidebarProps) => {
   const menuItems = [
     { name: 'Dashboard', icon: '📊', path: '/dashboard' },
-    { name: 'Clients', icon: '👥', path: '/clients' },
-    { name: 'Invoices', icon: '📋', path: '/invoices' },
+    { name: 'Clients', icon: '👥', path: '/dashboard/clients' },
+    { name: 'Invoices', icon: '📋', path: '/dashboard/invoices' },
   ];
 
   return (

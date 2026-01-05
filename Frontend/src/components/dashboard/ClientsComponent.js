@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import Sidebar from '../src/components/Sidebar';
-import styles from '../styles/Users.module.css';
+import { useState } from 'react';
+import Sidebar from '../layout/Sidebar';
+import styles from '../../../styles/Users.module.css';
 
-const Clients = ({ initialClients }) => {
+const ClientsComponent = ({ initialClients }) => {
   const [clients, setClients] = useState(initialClients || []);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -10,9 +10,6 @@ const Clients = ({ initialClients }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
   const [deletingClientId, setDeletingClientId] = useState(null);
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => { setIsClient(true); }, []);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -57,16 +54,14 @@ const Clients = ({ initialClients }) => {
       const response = await fetch(finalUrl, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData), // Now matches ClientCreateDto
+        body: JSON.stringify(formData),
       });
 
       const result = await response.json();
       if (result.success) {
         if (editingClient) {
-          // Update local state with the returned data
           setClients(clients.map(c => c.id === editingClient.id ? result.data : c));
         } else {
-          // Add new client to local state
           setClients([...clients, result.data]);
         }
         setShowModal(false);
@@ -113,26 +108,30 @@ const Clients = ({ initialClients }) => {
             <button className="btn btn-success" onClick={handleOpenAddModal}>+ Add Client</button>
           </div>
 
-          <div className="card mt-3">
-            <div className="card-body">
-              <table className="table table-hover">
-                <thead>
+          <div className="card shadow-sm mt-3">
+            <div className="card-body p-0">
+              <table className="table table-hover align-middle mb-0">
+                <thead className="table-light">
                   <tr>
-                    <th>Name</th>
+                    <th className="ps-4">Name</th>
                     <th>Email</th>
                     <th>Company</th>
                     <th>Status</th>
-                    <th>Actions</th>
+                    <th className="text-end pe-4">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredClients.map((client) => (
                     <tr key={client.id}>
-                      <td>{client.name}</td>
+                      <td className="ps-4 fw-bold">{client.name}</td>
                       <td>{client.email}</td>
                       <td>{client.company}</td>
-                      <td><span className={`badge ${client.status === 'Active' ? 'bg-success' : 'bg-secondary'}`}>{client.status}</span></td>
                       <td>
+                        <span className={`badge ${client.status === 'Active' ? 'bg-success' : 'bg-secondary'}`}>
+                          {client.status}
+                        </span>
+                      </td>
+                      <td className="text-end pe-4">
                         <button className="btn btn-sm btn-outline-primary me-2" onClick={() => handleEditClick(client)}>Edit</button>
                         <button className="btn btn-sm btn-outline-danger" onClick={() => { setDeletingClientId(client.id); setShowDeleteModal(true); }}>Delete</button>
                       </td>
@@ -148,22 +147,22 @@ const Clients = ({ initialClients }) => {
       {/* --- ADD/EDIT MODAL --- */}
       {showModal && (
         <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog">
-            <div className="modal-content">
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content border-0 shadow">
               <form onSubmit={handleSubmit}>
-                <div className="modal-header">
-                  <h5 className="modal-title">{editingClient ? 'Edit Client' : 'Add New Client'}</h5>
+                <div className="modal-header border-bottom-0">
+                  <h5 className="modal-title fw-bold">{editingClient ? 'Edit Client' : 'Add New Client'}</h5>
                   <button type="button" className="btn-close" onClick={() => setShowModal(false)}></button>
                 </div>
-                <div className="modal-body">
-                  <div className="mb-3"><label>Name</label><input type="text" className="form-control" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} required /></div>
-                  <div className="mb-3"><label>Email</label><input type="email" className="form-control" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} required /></div>
-                  <div className="mb-3"><label>Company</label><input type="text" className="form-control" value={formData.company} onChange={(e) => setFormData({...formData, company: e.target.value})} /></div>
-                  <div className="mb-3"><label>Phone</label><input type="text" className="form-control" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} /></div>
+                <div className="modal-body px-4">
+                  <div className="mb-3"><label className="form-label small text-muted">Name</label><input type="text" className="form-control" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} required /></div>
+                  <div className="mb-3"><label className="form-label small text-muted">Email</label><input type="email" className="form-control" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} required /></div>
+                  <div className="mb-3"><label className="form-label small text-muted">Company</label><input type="text" className="form-control" value={formData.company} onChange={(e) => setFormData({...formData, company: e.target.value})} /></div>
+                  <div className="mb-3"><label className="form-label small text-muted">Phone</label><input type="text" className="form-control" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} /></div>
                 </div>
-                <div className="modal-footer">
-                  <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
-                  <button type="submit" className="btn btn-primary">{editingClient ? 'Update Client' : 'Create Client'}</button>
+                <div className="modal-footer border-top-0">
+                  <button type="button" className="btn btn-light px-4" onClick={() => setShowModal(false)}>Cancel</button>
+                  <button type="submit" className="btn btn-primary px-4">{editingClient ? 'Update Client' : 'Create Client'}</button>
                 </div>
               </form>
             </div>
@@ -171,21 +170,19 @@ const Clients = ({ initialClients }) => {
         </div>
       )}
 
-      {/* --- DELETE CONFIRMATION MODAL (FIXED) --- */}
+      {/* --- DELETE CONFIRMATION MODAL --- */}
       {showDeleteModal && (
         <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Confirm Delete</h5>
-                <button type="button" className="btn-close" onClick={() => setShowDeleteModal(false)}></button>
-              </div>
+          <div className="modal-dialog modal-dialog-centered modal-sm">
+            <div className="modal-content border-0 shadow p-3 text-center">
               <div className="modal-body">
-                <p>Are you sure you want to delete this client? This action cannot be undone.</p>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowDeleteModal(false)}>Cancel</button>
-                <button type="button" className="btn btn-danger" onClick={handleDeleteConfirm}>Delete Permanently</button>
+                <div className="text-danger mb-3" style={{fontSize: '2rem'}}>⚠️</div>
+                <h5 className="fw-bold">Confirm Delete</h5>
+                <p className="small text-muted">Are you sure? This action cannot be undone.</p>
+                <div className="d-flex justify-content-center gap-2 mt-4">
+                  <button className="btn btn-light px-3" onClick={() => setShowDeleteModal(false)}>Cancel</button>
+                  <button className="btn btn-danger px-3" onClick={handleDeleteConfirm}>Delete</button>
+                </div>
               </div>
             </div>
           </div>
@@ -195,14 +192,4 @@ const Clients = ({ initialClients }) => {
   );
 };
 
-export async function getServerSideProps() {
-  try {
-    const response = await fetch('http://localhost:5085/api/Clients');
-    const result = await response.json();
-    return { props: { initialClients: result.success ? result.data : [] } };
-  } catch (error) {
-    return { props: { initialClients: [] } };
-  }
-}
-
-export default Clients;
+export default ClientsComponent;
