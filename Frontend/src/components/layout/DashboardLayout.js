@@ -7,7 +7,6 @@ import styles from '../../../styles/Layout.module.css';
 const DashboardLayout = ({ children, user, activePage }) => {
   const [isOpen, setIsOpen] = useState(false);
 
-  // Open sidebar by default on desktop
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth > 768) {
