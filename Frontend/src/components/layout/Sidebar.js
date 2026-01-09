@@ -16,11 +16,18 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       id: 'dashboard'
     },
     { 
+      name: 'Barbers', 
+      icon: faUser,
+      path: '/dashboard/barbers',
+      id: 'barber'
+    },
+    { 
       name: 'Clients', 
       icon: faUser,
       path: '/dashboard/clients',
       id: 'clients'
     },
+
     { 
       name: 'Invoices', 
       icon: faFileInvoice,
