@@ -1,6 +1,7 @@
 import Head from 'next/head';
 import nookies from 'nookies';
 import InvoicesComponent from '../../src/components/dashboard/InvoicesComponent';
+import DashboardLayout from '../../src/components/layout/DashboardLayout';
 
 const InvoicesPage = ({ user, initialInvoices }) => {
   return (
@@ -8,8 +9,9 @@ const InvoicesPage = ({ user, initialInvoices }) => {
       <Head>
         <title>Invoices | Admin Panel</title>
       </Head>
-      {/* Pass both user and fetched invoices to the UI component */}
-      <InvoicesComponent user={user} initialInvoices={initialInvoices} />
+      <DashboardLayout>
+        <InvoicesComponent user={user} initialInvoices={initialInvoices} />
+      </DashboardLayout>
     </>
   );
 };

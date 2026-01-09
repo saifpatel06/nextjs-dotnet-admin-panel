@@ -1,10 +1,8 @@
 import { useState } from 'react';
-import Sidebar from '../layout/Sidebar';
 import styles from '../../../styles/Users.module.css';
 
 const ClientsComponent = ({ user, initialClients }) => {
   const [clients, setClients] = useState(initialClients || []);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -18,8 +16,6 @@ const ClientsComponent = ({ user, initialClients }) => {
     phone: '',
     status: 'Active',
   });
-
-  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
   const filteredClients = clients.filter(c =>
     c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -79,9 +75,9 @@ const ClientsComponent = ({ user, initialClients }) => {
       const response = await fetch(`http://localhost:5085/api/Clients/${deletingClientId}`, {
         method: 'DELETE',
         headers: {
-        'Authorization': `Bearer ${user.token}`,
-        'Content-Type': 'application/json'
-      }
+          'Authorization': `Bearer ${user.token}`,
+          'Content-Type': 'application/json'
+        }
       });
 
       const result = await response.json();
@@ -96,67 +92,61 @@ const ClientsComponent = ({ user, initialClients }) => {
   };
 
   return (
-    <div className={styles.usersWrapper}>
-      <Sidebar isOpen={sidebarOpen} activePage="clients" />
-      <div className={styles.mainContent}>
-        <header className={styles.header}>
-          <button className={styles.menuToggle} onClick={toggleSidebar}>☰</button>
-          <h1 className={styles.pageTitle}>Client Management</h1>
-        </header>
-
-        <main className={styles.content}>
-          <div className={styles.actionBar}>
-            <input 
-                type="text" 
-                placeholder="Search clients..." 
-                className="form-control w-50" 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)} 
-            />
-            <button className="btn btn-success" onClick={handleOpenAddModal}>+ Add Client</button>
-          </div>
-
-          <div className="card shadow-sm mt-3">
-            <div className="card-body p-0">
-              <table className="table table-hover align-middle mb-0">
-                <thead className="table-light">
-                  <tr>
-                    <th className="ps-4">Name</th>
-                    <th>Email</th>
-                    <th>Company</th>
-                    <th>Status</th>
-                    <th className="text-end pe-4">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredClients.map((client) => (
-                    <tr key={client.id}>
-                      <td className="ps-4 fw-bold">{client.name}</td>
-                      <td>{client.email}</td>
-                      <td>{client.company}</td>
-                      <td>
-                        <span className={`badge ${client.status === 'Active' ? 'bg-success' : 'bg-secondary'}`}>
-                          {client.status}
-                        </span>
-                      </td>
-                      <td className="text-end pe-4">
-                        <button className="btn btn-sm btn-outline-primary me-2" onClick={() => handleEditClick(client)}>Edit</button>
-                        <button className="btn btn-sm btn-outline-danger" onClick={() => { setDeletingClientId(client.id); setShowDeleteModal(true); }}>Delete</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </main>
+    <div className={styles.content}>
+      <div className={styles.actionBar}>
+        <input 
+          type="text" 
+          placeholder="Search clients..." 
+          className="form-control w-50 shadow-sm" 
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)} 
+        />
+        <button className="btn btn-primary" onClick={handleOpenAddModal}>
+          + Add New Client
+        </button>
       </div>
 
-      {/* --- ADD/EDIT MODAL --- */}
+      <div className="card shadow-sm border-0 mt-3">
+        <div className="card-body p-0">
+          <div className="table-responsive">
+            <table className="table table-hover align-middle mb-0">
+              <thead className="table-light">
+                <tr>
+                  <th className="ps-4">Name</th>
+                  <th>Email</th>
+                  <th>Company</th>
+                  <th>Status</th>
+                  <th className="text-end pe-4">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredClients.map((client) => (
+                  <tr key={client.id}>
+                    <td className="ps-4 fw-bold">{client.name}</td>
+                    <td>{client.email}</td>
+                    <td>{client.company}</td>
+                    <td>
+                      <span className={`badge rounded-pill ${client.status === 'Active' ? 'bg-success' : 'bg-secondary'}`}>
+                        {client.status}
+                      </span>
+                    </td>
+                    <td className="text-end pe-4">
+                      <button className="btn btn-sm btn-outline-primary me-2 shadow-sm" onClick={() => handleEditClick(client)}>Edit</button>
+                      <button className="btn btn-sm btn-outline-danger shadow-sm" onClick={() => { setDeletingClientId(client.id); setShowDeleteModal(true); }}>Delete</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {/* --- MODALS STAY HERE --- */}
       {showModal && (
         <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content border-0 shadow">
+            <div className="modal-content border-0 shadow-lg">
               <form onSubmit={handleSubmit}>
                 <div className="modal-header border-bottom-0">
                   <h5 className="modal-title fw-bold">{editingClient ? 'Edit Client' : 'Add New Client'}</h5>
@@ -178,7 +168,6 @@ const ClientsComponent = ({ user, initialClients }) => {
         </div>
       )}
 
-      {/* --- DELETE CONFIRMATION MODAL --- */}
       {showDeleteModal && (
         <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog modal-dialog-centered modal-sm">

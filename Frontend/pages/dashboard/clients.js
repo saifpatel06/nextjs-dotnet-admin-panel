@@ -1,6 +1,7 @@
 import Head from 'next/head';
 import nookies from 'nookies';
 import ClientsComponent from '../../src/components/dashboard/ClientsComponent';
+import DashboardLayout from '../../src/components/layout/DashboardLayout'
 
 const ClientsPage = ({ user, initialClients }) => {
   return (
@@ -8,7 +9,9 @@ const ClientsPage = ({ user, initialClients }) => {
       <Head>
         <title>Clients | Admin Panel</title>
       </Head>
-      <ClientsComponent user={user} initialClients={initialClients} />
+      <DashboardLayout>
+        <ClientsComponent user={user} initialClients={initialClients} />
+      </DashboardLayout>
     </>
   );
 };

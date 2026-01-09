@@ -1,6 +1,7 @@
 import Head from 'next/head';
 import nookies from 'nookies';
 import DashboardComponent from '../../src/components/dashboard/DashboardComponent';
+import DashboardLayout from '../../src/components/layout/DashboardLayout';
 
 const Dashboard = ({ user }) => {
   return (
@@ -8,7 +9,9 @@ const Dashboard = ({ user }) => {
       <Head>
         <title>Dashboard</title>
       </Head>
-      <DashboardComponent user={user} />
+      <DashboardLayout>
+        <DashboardComponent user={user} />
+      </DashboardLayout>
     </>
   );
 }

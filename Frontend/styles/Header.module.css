@@ -1,0 +1,120 @@
+.header {
+  height: 70px;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  position: sticky;
+  top: 0;
+  z-index: 999;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.toggleBtn {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.toggleBtn:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+}
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+.parent { 
+  color: #94a3b8; 
+}
+
+.separator { 
+  color: #cbd5e1; 
+}
+
+.current { 
+  color: #1e293b; 
+  font-weight: 600; 
+}
+
+.profileSection { 
+  display: flex; 
+  align-items: center; 
+  gap: 12px; 
+}
+
+.userText { 
+  text-align: right; 
+}
+
+.userName { 
+  margin: 0; 
+  font-size: 0.9rem; 
+  font-weight: 700; 
+  color: #1e293b; 
+}
+
+.userRole { 
+  margin: 0; 
+  font-size: 0.75rem; 
+  color: #64748b; 
+  margin-top: 2px;
+}
+
+.avatar {
+  width: 42px; 
+  height: 42px;
+  background: #3b82f6; 
+  color: white;
+  border-radius: 10px;
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+/* Hide toggle button on desktop when sidebar is always visible */
+@media (min-width: 769px) {
+  .toggleBtn {
+    display: flex;
+  }
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .header {
+    padding: 0 1rem;
+  }
+  
+  .toggleBtn {
+    display: flex;
+  }
+  
+  .userText {
+    display: none;
+  }
+}
