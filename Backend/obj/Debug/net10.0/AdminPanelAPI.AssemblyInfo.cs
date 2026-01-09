@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("AdminPanelAPI")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+fe6cd79719451533397c7baae61fbef9ffe5a3f8")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2c888c0623f6d2d3a6f73f91f42e8685e5b17b3f")]
 [assembly: System.Reflection.AssemblyProductAttribute("AdminPanelAPI")]
 [assembly: System.Reflection.AssemblyTitleAttribute("AdminPanelAPI")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -5,7 +5,7 @@ namespace AdminPanelAPI.Models
 {
     public class Client
     {
-        [Key] // Defines this as the Primary Key
+        [Key]
         public int Id { get; set; }
 
         [Required(ErrorMessage = "Client name is required")]
