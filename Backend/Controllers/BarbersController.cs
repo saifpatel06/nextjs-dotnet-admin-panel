@@ -21,17 +21,43 @@ namespace AdminPanelAPI.Controllers
 
         // GET: api/Barbers
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<IEnumerable<Barber>>>> GetBarbers()
+        public async Task<IActionResult> GetBarbers()
         {
-            var barbers = await _context.Barbers.OrderByDescending(b => b.JoiningDate).ToListAsync();
-            return Ok(new ApiResponse<IEnumerable<Barber>> 
+            var barbers = await _context.Barbers
+                .Include(b => b.Availabilities) 
+                .ToListAsync();
+
+            var barberDtos = barbers.Select(b => new BarberDto
+            {
+                Id = b.Id,
+                Name = b.Name,
+                Role = b.Role,
+                Phone = b.Phone,
+                Email = b.Email,
+                Specialization = b.Specialization,
+                Bio = b.Bio,
+                ImageUrl = b.ImageUrl,
+                IsActive = b.IsActive,
+                Rating = b.Rating,
+                JoiningDate = b.JoiningDate,
+                Availabilities = b.Availabilities.Select(a => new BarberAvailabilityDto
+                {
+                    Id = a.Id,
+                    DayOfWeek = a.DayOfWeek,
+                    StartTime = a.StartTime,
+                    EndTime = a.EndTime,
+                    IsActive = a.IsActive
+                }).ToList()
+            }).ToList();
+
+            return Ok(new ApiResponse<List<BarberDto>> 
             { 
                 Success = true, 
-                Data = barbers 
+                Data = barberDtos 
             });
         }
 
-        // GET: api/Barbers/5 - ADDED THIS TO FIX THE ERROR
+        // GET: api/Barbers/5 
         [HttpGet("{id}")]
         public async Task<ActionResult<ApiResponse<Barber>>> GetBarber(int id)
         {
@@ -174,6 +200,36 @@ namespace AdminPanelAPI.Controllers
                     Errors = new List<string> { ex.Message } 
                 });
             }
+        }
+    
+        [HttpPost("{id}/availability")]
+        public async Task<IActionResult> SetAvailability(int id, [FromBody] List<BarberAvailabilityDto> availabilityDtos)
+        {
+            var barber = await _context.Barbers.Include(b => b.Availabilities)
+                                            .FirstOrDefaultAsync(b => b.Id == id);
+
+            if (barber == null) 
+            {
+                // Changed "success" to "Success" and "message" to "Message"
+                return NotFound(new ApiResponse<string> { Success = false, Message = "Barber not found" });
+            }
+
+            _context.BarberAvailabilities.RemoveRange(barber.Availabilities);
+
+            var newAvailabilities = availabilityDtos.Select(dto => new BarberAvailability
+            {
+                BarberId = id,
+                DayOfWeek = dto.DayOfWeek,
+                StartTime = dto.StartTime,
+                EndTime = dto.EndTime,
+                IsActive = dto.IsActive
+            }).ToList();
+
+            _context.BarberAvailabilities.AddRange(newAvailabilities);
+            await _context.SaveChangesAsync();
+
+            // Changed "success" to "Success" and "message" to "Message"
+            return Ok(new ApiResponse<string> { Success = true, Message = "Availability updated successfully" });
         }
     }
 }

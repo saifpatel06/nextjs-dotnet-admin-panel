@@ -30,5 +30,7 @@ namespace AdminPanelAPI.Models
         public decimal Rating { get; set; } = 5.0m;
 
         public DateTime JoiningDate { get; set; } = DateTime.UtcNow;
+
+        public virtual ICollection<BarberAvailability> Availabilities { get; set; } = new List<BarberAvailability>();
     }
 }
