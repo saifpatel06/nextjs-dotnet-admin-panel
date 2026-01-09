@@ -5,7 +5,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faGauge, faFileInvoice, faRightFromBracket } from '@fortawesome/free-solid-svg-icons';
 import styles from '../../../styles/Sidebar.module.css';
 
-const Sidebar = ({ isOpen }) => {
+const Sidebar = ({ isOpen, toggleSidebar }) => {
   const router = useRouter();
 
   const menuItems = [
@@ -41,40 +41,56 @@ const Sidebar = ({ isOpen }) => {
   };
 
   return (
-    <aside className={`${styles.sidebar} ${isOpen ? styles.sidebarOpen : styles.sidebarClosed}`}>
-      {/* Logo Text */}
-      <div className={styles.logo}>
-        <h2 className={styles.logoText}>Admin Panel</h2>
-      </div>
+    <>
+      {/* Backdrop for mobile */}
+      {isOpen && (
+        <div 
+          className={styles.backdrop} 
+          onClick={toggleSidebar}
+        />
+      )}
 
-      {/* Navigation */}
-      <nav className={styles.nav}>
-        {menuItems.map((item) => (
-          <Link
-            key={item.id}
-            href={item.path}
-            className={`${styles.navItem} ${
-              isActiveRoute(item.path) ? styles.active : ''
-            }`}
-          >
+      <aside className={`${styles.sidebar} ${isOpen ? styles.sidebarOpen : styles.sidebarClosed}`}>
+        {/* Logo Text */}
+        <div className={styles.logo}>
+          <h2 className={styles.logoText}>Admin Panel</h2>
+        </div>
+
+        {/* Navigation */}
+        <nav className={styles.nav}>
+          {menuItems.map((item) => (
+            <Link
+              key={item.id}
+              href={item.path}
+              className={`${styles.navItem} ${
+                isActiveRoute(item.path) ? styles.active : ''
+              }`}
+              onClick={() => {
+                // Close sidebar on mobile when clicking a link
+                if (window.innerWidth <= 768) {
+                  toggleSidebar();
+                }
+              }}
+            >
+              <span className={styles.iconWrapper}>
+                <FontAwesomeIcon icon={item.icon} />
+              </span>
+              <span className={styles.navLabel}>{item.name}</span>
+            </Link>
+          ))}
+        </nav>
+
+        {/* Logout */}
+        <div className={styles.bottomSection}>
+          <button onClick={handleLogout} className={styles.logoutBtn}>
             <span className={styles.iconWrapper}>
-              <FontAwesomeIcon icon={item.icon} />
+              <FontAwesomeIcon icon={faRightFromBracket} />
             </span>
-            <span className={styles.navLabel}>{item.name}</span>
-          </Link>
-        ))}
-      </nav>
-
-      {/* Logout */}
-      <div className={styles.bottomSection}>
-        <button onClick={handleLogout} className={styles.logoutBtn}>
-          <span className={styles.iconWrapper}>
-            <FontAwesomeIcon icon={faRightFromBracket} />
-          </span>
-          <span className={styles.navLabel}>Logout</span>
-        </button>
-      </div>
-    </aside>
+            <span className={styles.navLabel}>Logout</span>
+          </button>
+        </div>
+      </aside>
+    </>
   );
 };
 

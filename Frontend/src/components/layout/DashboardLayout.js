@@ -1,20 +1,36 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import Footer from './Footer';
 import styles from '../../../styles/Layout.module.css';
 
 const DashboardLayout = ({ children, user, activePage }) => {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
+
+  // Open sidebar by default on desktop
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth > 768) {
+        setIsOpen(true); // Open on desktop
+      } else {
+        setIsOpen(false); // Closed on mobile
+      }
+    };
+
+    // Set initial state
+    handleResize();
+
+    // Listen for window resize
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const toggleSidebar = () => setIsOpen(!isOpen);
 
   return (
     <div className={styles.layoutContainer}>
-      {/* Sidebar gets the isOpen state */}
       <Sidebar isOpen={isOpen} toggleSidebar={toggleSidebar} activePage={activePage} />
       
-      {/* Content area shifts only on desktop when sidebar is open */}
       <div className={`${styles.mainWrapper} ${isOpen ? styles.shifted : ''}`}>
         <Header user={user} activePage={activePage} toggleSidebar={toggleSidebar} />
         

@@ -2,41 +2,40 @@
   display: flex;
   min-height: 100vh;
   background: #f9fafb;
+  position: relative;
 }
 
 .mainWrapper {
   flex: 1;
   display: flex;
   flex-direction: column;
-  margin-left: 240px;
-  transition: margin-left 0.3s ease;
   min-height: 100vh;
-}
-
-.mainWrapper.shifted {
-  margin-left: 240px;
+  transition: margin-left 0.3s ease;
+  margin-left: 0; /* Default no margin */
 }
 
 .pageContent {
   flex: 1;
   padding: 24px;
   background: #f9fafb;
+  min-height: calc(100vh - 70px);
 }
 
-/* When sidebar is closed */
+/* Desktop - sidebar pushes content when open */
 @media (min-width: 769px) {
-  .mainWrapper:not(.shifted) {
-    margin-left: 0;
+  .mainWrapper.shifted {
+    margin-left: 240px;
   }
 }
 
-/* Mobile - sidebar overlays */
+/* Mobile - sidebar overlays, no margin ever */
 @media (max-width: 768px) {
   .mainWrapper {
-    margin-left: 0;
+    margin-left: 0 !important;
+    width: 100%;
   }
   
-  .mainWrapper.shifted {
-    margin-left: 0;
+  .pageContent {
+    padding: 16px;
   }
 }
