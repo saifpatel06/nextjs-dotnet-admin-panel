@@ -1,43 +1,47 @@
 import React, { useState, useEffect } from 'react';
 import styles from '../../../styles/Calendar.module.css';
 
-const CalendarView = ({ appointments, onEdit }) => {
-  const [viewType, setViewType] = useState('week');
+const CalendarView = ({ appointments, onEdit, selectedDate, onDateChange }) => {
   const [now, setNow] = useState(new Date());
   
   const hours = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
-  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const activeDays = viewType === 'week' ? days : [days[new Date().getDay()]];
-
   const HOUR_HEIGHT = 100;
   const START_HOUR = hours[0];
   const HEADER_HEIGHT = 50;
 
-  // Update the red line every minute
+  const uniqueBarbers = [...new Set(appointments.map(a => a.barberName))].sort();
+
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
 
-  const getStatusStyles = (status) => {
-    switch (status) {
-      case 'Confirmed': return { bg: '#e8f5e9', border: '#2e7d32', color: '#1b5e20' };
-      case 'Completed': return { bg: '#e3f2fd', border: '#1565c0', color: '#0d47a1' };
-      case 'Cancelled': return { bg: '#ffebee', border: '#c62828', color: '#b71c1c' };
-      default: return { bg: '#fffde7', border: '#fbc02d', color: '#f57f17' };
-    }
+  // DATE NAVIGATION HELPERS
+  const handlePrevDay = () => {
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() - 1);
+    onDateChange(d.toISOString().split('T')[0]);
   };
 
-  // Calculate where the red line should be
+  const handleNextDay = () => {
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() + 1);
+    onDateChange(d.toISOString().split('T')[0]);
+  };
+
+  const handleGoToday = () => {
+    onDateChange(new Date().toISOString().split('T')[0]);
+  };
+
   const calculateCurrentTimeTop = () => {
+    // ONLY show the red line if the selected date is TODAY
+    const isToday = new Date().toISOString().split('T')[0] === selectedDate;
+    if (!isToday) return null;
+
     const currentHour = now.getHours();
     const currentMinutes = now.getMinutes();
-    
-    if (currentHour < START_HOUR || currentHour >= hours[hours.length - 1] + 1) {
-      return null; // Don't show line if outside business hours
-    }
-
-    return ((currentHour - START_HOUR) * HOUR_HEIGHT) + ((currentMinutes / 60) * HOUR_HEIGHT) + HEADER_HEIGHT;
+    if (currentHour < START_HOUR || currentHour >= hours[hours.length - 1] + 1) return null;
+    return ((currentHour - START_HOUR) * HOUR_HEIGHT) + ((currentMinutes / 60) * HOUR_HEIGHT);
   };
 
   const timeLineTop = calculateCurrentTimeTop();
@@ -45,84 +49,105 @@ const CalendarView = ({ appointments, onEdit }) => {
   return (
     <div className={styles.calendarContainer}>
       <div className={styles.calendarHeader}>
-        <div className="btn-group shadow-sm">
-          <button className={`btn btn-sm ${viewType === 'day' ? 'btn-primary' : 'btn-light border'}`} onClick={() => setViewType('day')}>Day</button>
-          <button className={`btn btn-sm ${viewType === 'week' ? 'btn-primary' : 'btn-light border'}`} onClick={() => setViewType('week')}>Week</button>
+        <div className="d-flex align-items-center gap-3">
+          {/* NAVIGATION BUTTONS */}
+          <div className="btn-group">
+            <button className="btn btn-outline-secondary btn-sm" onClick={handlePrevDay}>←</button>
+            <button className="btn btn-outline-secondary btn-sm" onClick={handleGoToday}>Today</button>
+            <button className="btn btn-outline-secondary btn-sm" onClick={handleNextDay}>→</button>
+          </div>
+
+          {/* DATE PICKER */}
+          <input 
+            type="date" 
+            className="form-control form-control-sm border-0 fw-bold bg-transparent" 
+            style={{ width: 'auto' }}
+            value={selectedDate}
+            onChange={(e) => onDateChange(e.target.value)}
+          />
         </div>
-        <div className="fw-bold text-secondary">
-          {viewType === 'week' ? 'Weekly Schedule' : `Today's Schedule`}
+        
+        <div className="badge bg-primary px-3">
+          {selectedDate === new Date().toISOString().split('T')[0] ? 'Live View' : 'Past/Future View'}
         </div>
       </div>
 
-      <div className={styles.responsiveWrapper} style={{ position: 'relative' }}>
-        {/* THE RED LINE INDICATOR */}
-        {timeLineTop !== null && (
-          <div 
-            className={styles.currentTimeLine} 
-            style={{ top: `${timeLineTop}px` }}
-          >
-            <div className={styles.currentTimeCircle}></div>
-          </div>
-        )}
-
-        <div className={styles.grid} style={{ gridTemplateColumns: `80px repeat(${activeDays.length}, 1fr)` }}>
+      <div className={styles.responsiveWrapper}>
+        <div className={styles.grid} style={{ 
+          gridTemplateColumns: `80px repeat(${uniqueBarbers.length || 1}, 1fr)`,
+          position: 'relative' 
+        }}>
           
           <div className={styles.dayColumn}>
             <div className={styles.dayHeader} style={{ height: `${HEADER_HEIGHT}px` }}>Time</div>
-            {hours.map(h => <div key={h} className={styles.timeLabelCell} style={{ height: `${HOUR_HEIGHT}px` }}>{h}:00</div>)}
+            <div className={styles.columnBody}>
+              {hours.map(h => (
+                <div key={h} className={styles.timeLabelCell} style={{ height: `${HOUR_HEIGHT}px` }}>
+                  {h}:00
+                </div>
+              ))}
+            </div>
           </div>
 
-          {activeDays.map((dayLabel, idx) => {
-            const dayIdx = viewType === 'week' ? idx : new Date().getDay();
-            const isToday = new Date().getDay() === dayIdx;
-
-            return (
-              <div key={dayLabel} className={styles.dayColumn} style={{ position: 'relative' }}>
-                <div className={`${styles.dayHeader} ${isToday ? 'text-primary' : ''}`} style={{ height: `${HEADER_HEIGHT}px` }}>
-                   {dayLabel}
-                </div>
-                
+          {uniqueBarbers.length > 0 ? uniqueBarbers.map((barber) => (
+            <div key={barber} className={styles.dayColumn}>
+              <div className={styles.dayHeader} style={{ height: `${HEADER_HEIGHT}px` }}>
+                {barber}
+              </div>
+              
+              <div className={styles.columnBody}>
                 {hours.map(h => (
                   <div key={h} className={styles.slot} style={{ height: `${HOUR_HEIGHT}px` }}></div>
                 ))}
 
+                {timeLineTop !== null && (
+                  <div className={styles.currentTimeLine} style={{ top: `${timeLineTop}px` }}>
+                    <div className={styles.currentTimeCircle}></div>
+                  </div>
+                )}
+
                 {appointments
-                  .filter(a => new Date(a.appointmentDate).getDay() === dayIdx)
+                  .filter(a => a.barberName === barber)
                   .map(app => {
                     const date = new Date(app.appointmentDate);
-                    const topOffset = ((date.getHours() - START_HOUR) * HOUR_HEIGHT) + ((date.getMinutes() / 60) * HOUR_HEIGHT);
+                    const topPos = ((date.getHours() - START_HOUR) * HOUR_HEIGHT) + ((date.getMinutes() / 60) * HOUR_HEIGHT);
                     const blockHeight = ((app.durationInMinutes || 30) / 60) * HOUR_HEIGHT;
-                    const s = getStatusStyles(app.status);
+                    
+                    // Simple status color picker
+                    let bgColor = '#fffde7'; 
+                    let borderColor = '#fbc02d';
+                    if(app.status === 'Confirmed') { bgColor = '#e8f5e9'; borderColor = '#2e7d32'; }
+                    if(app.status === 'Cancelled') { bgColor = '#ffebee'; borderColor = '#c62828'; }
 
                     return (
                       <div 
                         key={app.id} 
                         className={styles.appointmentBlock} 
                         style={{ 
-                          position: 'absolute',
-                          top: `${topOffset + HEADER_HEIGHT}px`,
+                          top: `${topPos}px`,
                           height: `${blockHeight - 2}px`, 
-                          left: '4px',
-                          right: '4px',
-                          backgroundColor: s.bg, 
-                          borderLeft: `4px solid ${s.border}`,
-                          zIndex: 5
+                          backgroundColor: bgColor, 
+                          borderLeft: `4px solid ${borderColor}`
                         }}
                         onClick={() => onEdit(app)}
                       >
-                        <div className="d-flex flex-column">
-                          <span className="fw-bold" style={{fontSize: '0.75rem', color: s.color}}>{app.clientName}</span>
-                          <span className="text-muted" style={{fontSize: '0.65rem'}}>{app.serviceName}</span>
-                        </div>
-                        <div className="fw-bold text-end" style={{fontSize: '0.6rem', color: s.border}}>
-                          @{app.barberName}
+                        <div className="d-flex flex-column h-100 justify-content-between">
+                          <div className="fw-bold text-truncate" style={{fontSize: '0.8rem'}}>{app.clientName}</div>
+                          <div className="text-muted text-truncate" style={{ fontSize: '0.7rem', marginTop: '1px', fontStyle: 'italic' }}>
+                            ✂️ {app.serviceName || 'No Service'}
+                          </div>
+                          <div className="text-end" style={{fontSize: '0.6rem', fontWeight: 'bold'}}>
+                            {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </div>
                         </div>
                       </div>
                     );
                   })}
               </div>
-            );
-          })}
+            </div>
+          )) : (
+            <div className="p-5 text-center text-muted w-100">No appointments for this date.</div>
+          )}
         </div>
       </div>
     </div>
