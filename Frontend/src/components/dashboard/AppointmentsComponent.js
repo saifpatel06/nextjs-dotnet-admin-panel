@@ -8,8 +8,10 @@ const AppointmentsComponent = ({ user, initialAppointments }) => {
   const [barbers, setBarbers] = useState([]);
   const [services, setServices] = useState([]);
   const [clients, setClients] = useState([]);
+
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [idToDelete, setIdToDelete] = useState(null);
   
-  // DATE TRAVEL STATE
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
   const [mounted, setMounted] = useState(false);
@@ -83,7 +85,6 @@ const AppointmentsComponent = ({ user, initialAppointments }) => {
   };
 
   const refreshAppointments = async () => {
-    // Note: If your API supports filtering by date, add ?date=${selectedDate} to the URL
     const res = await fetch(`http://localhost:5085/api/Appointments`, {
       headers: { 'Authorization': `Bearer ${user.token}` }
     });
@@ -102,19 +103,28 @@ const AppointmentsComponent = ({ user, initialAppointments }) => {
     setShowModal(true);
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm("Are you sure?")) return;
+  const triggerDelete = (id) => {
+    setIdToDelete(id);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!idToDelete) return;
+    
     notify.loading("Deleting...");
     try {
-      const res = await fetch(`http://localhost:5085/api/Appointments/${id}`, {
+      const res = await fetch(`http://localhost:5085/api/Appointments/${idToDelete}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${user.token}` }
       });
+      
       notify.dismiss();
       if (res.ok) { 
-        setShowModal(false); 
+        setShowDeleteConfirm(false);
+        setShowModal(false);
+        setIdToDelete(null);
         refreshAppointments(); 
-        notify.success("Deleted");
+        notify.success("Deleted successfully");
       }
     } catch (error) {
       notify.dismiss();
@@ -192,7 +202,6 @@ const AppointmentsComponent = ({ user, initialAppointments }) => {
         onEdit={handleEdit} 
       />
 
-      {/* Modal logic remains exactly as you had it */}
       {showModal && (
         <div className="modal show d-block" style={{backgroundColor:'rgba(0,0,0,0.6)', zIndex: 1070}}>
             {/* ... modal content ... */}
@@ -258,7 +267,7 @@ const AppointmentsComponent = ({ user, initialAppointments }) => {
                             </div>
                         </div>
                         <div className="modal-footer bg-light border-0 d-flex justify-content-between">
-                            {isEditing ? <button type="button" className="btn btn-outline-danger" onClick={() => handleDelete(formData.id)}>Delete</button> : <div></div>}
+                            {isEditing ? <button type="button" className="btn btn-outline-danger" onClick={() => triggerDelete(formData.id)}>Delete</button> : <div></div>}
                             <div className="d-flex gap-2">
                                 <button type="button" className="btn btn-light" onClick={() => setShowModal(false)}>Cancel</button>
                                 <button type="submit" className="btn btn-primary px-4 shadow-sm">Save Booking</button>
@@ -267,6 +276,39 @@ const AppointmentsComponent = ({ user, initialAppointments }) => {
                     </form>
                 </div>
             </div>
+        </div>
+      )}
+
+      {showDeleteConfirm && (
+        <div className="modal show d-block" style={{backgroundColor:'rgba(0,0,0,0.7)', zIndex: 1080}}>
+          <div className="modal-dialog modal-sm modal-dialog-centered">
+            <div className="modal-content border-0 shadow-lg">
+              <div className="modal-body p-4 text-center">
+                <div className="text-danger mb-3">
+                  <i className="bi bi-exclamation-triangle-fill" style={{fontSize: '3rem'}}></i>
+                </div>
+                <h5 className="fw-bold">Are you sure?</h5>
+                <p className="text-muted small">This action cannot be undone. This appointment will be permanently removed.</p>
+                
+                <div className="d-flex gap-2 mt-4">
+                  <button 
+                    type="button" 
+                    className="btn btn-light w-100" 
+                    onClick={() => setShowDeleteConfirm(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn btn-danger w-100" 
+                    onClick={confirmDelete}
+                  >
+                    Yes, Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

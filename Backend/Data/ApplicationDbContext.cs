@@ -13,8 +13,6 @@ namespace AdminPanelAPI.Data
         public DbSet<Admin> Admins { get; set; }
         public DbSet<Client> Clients { get; set; }
 
-        public DbSet<Invoice> Invoices { get; set; }
-
         public DbSet<Barber> Barbers { get; set; }
 
         public DbSet<BarberAvailability> BarberAvailabilities { get; set; }
@@ -22,6 +20,9 @@ namespace AdminPanelAPI.Data
         public DbSet<Service> Services { get; set; }
 
         public DbSet<Appointment> Appointments { get; set; }
+
+        public DbSet<Invoice> Invoices { get; set; }
+        public DbSet<InvoiceItem> InvoiceItems { get; set; }
         
     }
 }

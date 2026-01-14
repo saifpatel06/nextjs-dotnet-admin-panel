@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import styles from '../../../styles/Users.module.css';
+import { notify } from '../../../utils/notify';
 
 const ClientsComponent = ({ user, initialClients }) => {
   const [clients, setClients] = useState(initialClients || []);
@@ -10,11 +11,7 @@ const ClientsComponent = ({ user, initialClients }) => {
   const [deletingClientId, setDeletingClientId] = useState(null);
 
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    company: '',
-    phone: '',
-    status: 'Active',
+    name: '', email: '', company: '', phone: '', status: 'Active',
   });
 
   const filteredClients = clients.filter(c =>
@@ -31,11 +28,8 @@ const ClientsComponent = ({ user, initialClients }) => {
   const handleEditClick = (client) => {
     setEditingClient(client);
     setFormData({ 
-      name: client.name, 
-      email: client.email, 
-      company: client.company, 
-      phone: client.phone, 
-      status: client.status 
+      name: client.name, email: client.email, company: client.company, 
+      phone: client.phone, status: client.status 
     });
     setShowModal(true);
   };
@@ -45,6 +39,8 @@ const ClientsComponent = ({ user, initialClients }) => {
     const url = 'http://localhost:5085/api/Clients';
     const method = editingClient ? 'PUT' : 'POST';
     const finalUrl = editingClient ? `${url}/${editingClient.id}` : url;
+
+    notify.loading(editingClient ? "Updating client..." : "Creating client...");
 
     try {
       const response = await fetch(finalUrl, {
@@ -57,6 +53,8 @@ const ClientsComponent = ({ user, initialClients }) => {
       });
 
       const result = await response.json();
+      notify.dismiss(); 
+
       if (result.success) {
         if (editingClient) {
           setClients(clients.map(c => c.id === editingClient.id ? result.data : c));
@@ -64,13 +62,19 @@ const ClientsComponent = ({ user, initialClients }) => {
           setClients([...clients, result.data]);
         }
         setShowModal(false);
+        notify.success("Client saved successfully!"); 
+      } else {
+        notify.error(result.message || "Failed to save client."); 
       }
     } catch (error) {
+      notify.dismiss();
+      notify.error("Network error. Please try again.");
       console.error("Save Error:", error);
     }
   };
 
   const handleDeleteConfirm = async () => {
+    notify.loading("Deleting client record...");
     try {
       const response = await fetch(`http://localhost:5085/api/Clients/${deletingClientId}`, {
         method: 'DELETE',
@@ -81,12 +85,19 @@ const ClientsComponent = ({ user, initialClients }) => {
       });
 
       const result = await response.json();
+      notify.dismiss();
+
       if (result.success) {
         setClients(clients.filter(c => c.id !== deletingClientId));
         setShowDeleteModal(false);
         setDeletingClientId(null);
+        notify.success("Client deleted successfully.");
+      } else {
+        notify.error(result.message || "Could not delete client.");
       }
     } catch (error) {
+      notify.dismiss();
+      notify.error("Network error occurred during deletion.");
       console.error("Delete Error:", error);
     }
   };

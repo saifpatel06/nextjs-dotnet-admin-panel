@@ -16,7 +16,6 @@ const CalendarView = ({ appointments, onEdit, selectedDate, onDateChange }) => {
     return () => clearInterval(timer);
   }, []);
 
-  // DATE NAVIGATION HELPERS
   const handlePrevDay = () => {
     const d = new Date(selectedDate);
     d.setDate(d.getDate() - 1);
@@ -34,7 +33,6 @@ const CalendarView = ({ appointments, onEdit, selectedDate, onDateChange }) => {
   };
 
   const calculateCurrentTimeTop = () => {
-    // ONLY show the red line if the selected date is TODAY
     const isToday = new Date().toISOString().split('T')[0] === selectedDate;
     if (!isToday) return null;
 
@@ -49,19 +47,16 @@ const CalendarView = ({ appointments, onEdit, selectedDate, onDateChange }) => {
   return (
     <div className={styles.calendarContainer}>
       <div className={styles.calendarHeader}>
-        <div className="d-flex align-items-center gap-3">
-          {/* NAVIGATION BUTTONS */}
+        <div className={styles.navControls}>
           <div className="btn-group">
             <button className="btn btn-outline-secondary btn-sm" onClick={handlePrevDay}>←</button>
             <button className="btn btn-outline-secondary btn-sm" onClick={handleGoToday}>Today</button>
             <button className="btn btn-outline-secondary btn-sm" onClick={handleNextDay}>→</button>
           </div>
 
-          {/* DATE PICKER */}
           <input 
             type="date" 
-            className="form-control form-control-sm border-0 fw-bold bg-transparent" 
-            style={{ width: 'auto' }}
+            className={styles.dateInput} 
             value={selectedDate}
             onChange={(e) => onDateChange(e.target.value)}
           />
@@ -73,11 +68,11 @@ const CalendarView = ({ appointments, onEdit, selectedDate, onDateChange }) => {
       </div>
 
       <div className={styles.responsiveWrapper}>
-        <div className={styles.grid} style={{ 
-          gridTemplateColumns: `80px repeat(${uniqueBarbers.length || 1}, 1fr)`,
-          position: 'relative' 
-        }}>
-          
+        <div 
+          className={styles.grid} 
+          style={{ '--barber-count': uniqueBarbers.length || 1 }}
+        >
+          {/* Time Gutter */}
           <div className={styles.dayColumn}>
             <div className={styles.dayHeader} style={{ height: `${HEADER_HEIGHT}px` }}>Time</div>
             <div className={styles.columnBody}>
@@ -89,6 +84,7 @@ const CalendarView = ({ appointments, onEdit, selectedDate, onDateChange }) => {
             </div>
           </div>
 
+          {/* Barber Columns */}
           {uniqueBarbers.length > 0 ? uniqueBarbers.map((barber) => (
             <div key={barber} className={styles.dayColumn}>
               <div className={styles.dayHeader} style={{ height: `${HEADER_HEIGHT}px` }}>
@@ -101,7 +97,7 @@ const CalendarView = ({ appointments, onEdit, selectedDate, onDateChange }) => {
                 ))}
 
                 {timeLineTop !== null && (
-                  <div className={styles.currentTimeLine} style={{ top: `${timeLineTop}px` }}>
+                  <div className={styles.currentTimeLine} style={{ '--line-top': `${timeLineTop}px` }}>
                     <div className={styles.currentTimeCircle}></div>
                   </div>
                 )}
@@ -113,30 +109,25 @@ const CalendarView = ({ appointments, onEdit, selectedDate, onDateChange }) => {
                     const topPos = ((date.getHours() - START_HOUR) * HOUR_HEIGHT) + ((date.getMinutes() / 60) * HOUR_HEIGHT);
                     const blockHeight = ((app.durationInMinutes || 30) / 60) * HOUR_HEIGHT;
                     
-                    // Simple status color picker
-                    let bgColor = '#fffde7'; 
-                    let borderColor = '#fbc02d';
-                    if(app.status === 'Confirmed') { bgColor = '#e8f5e9'; borderColor = '#2e7d32'; }
-                    if(app.status === 'Cancelled') { bgColor = '#ffebee'; borderColor = '#c62828'; }
+                    // Logic for status class
+                    const statusClass = styles[`status${app.status}`] || styles.statusPending;
 
                     return (
                       <div 
                         key={app.id} 
-                        className={styles.appointmentBlock} 
+                        className={`${styles.appointmentBlock} ${statusClass}`}
                         style={{ 
-                          top: `${topPos}px`,
-                          height: `${blockHeight - 2}px`, 
-                          backgroundColor: bgColor, 
-                          borderLeft: `4px solid ${borderColor}`
+                          '--top-pos': `${topPos}px`,
+                          '--block-height': `${blockHeight - 2}px` 
                         }}
                         onClick={() => onEdit(app)}
                       >
-                        <div className="d-flex flex-column h-100 justify-content-between">
-                          <div className="fw-bold text-truncate" style={{fontSize: '0.8rem'}}>{app.clientName}</div>
-                          <div className="text-muted text-truncate" style={{ fontSize: '0.7rem', marginTop: '1px', fontStyle: 'italic' }}>
-                            ✂️ {app.serviceName || 'No Service'}
+                        <div className={styles.appointmentContent}>
+                          <div className={styles.clientServiceInfo}>
+                            <span className={styles.clientName}>{app.clientName}</span>
+                            <span className={styles.serviceName}> — {app.serviceName || 'No Service'}</span>
                           </div>
-                          <div className="text-end" style={{fontSize: '0.6rem', fontWeight: 'bold'}}>
+                          <div className={styles.appointmentTime}>
                             {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </div>
                         </div>
@@ -146,7 +137,7 @@ const CalendarView = ({ appointments, onEdit, selectedDate, onDateChange }) => {
               </div>
             </div>
           )) : (
-            <div className="p-5 text-center text-muted w-100">No appointments for this date.</div>
+            <div className={styles.emptyState}>No appointments for this date.</div>
           )}
         </div>
       </div>

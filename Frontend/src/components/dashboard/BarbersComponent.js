@@ -1,15 +1,16 @@
 import { useState } from 'react';
 import styles from '../../../styles/Barbers.module.css';
+import { notify } from '../../../utils/notify'
 
 const BarbersComponent = ({ user, initialBarbers }) => {
   const [barbers, setBarbers] = useState(initialBarbers || []);
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showClearScheduleModal, setShowClearScheduleModal] = useState(false);
   const [editingBarber, setEditingBarber] = useState(null);
   const [deletingBarberId, setDeletingBarberId] = useState(null);
 
-  // --- Availability Logic ---
   const [activeTab, setActiveTab] = useState('basic');
   const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -21,7 +22,6 @@ const BarbersComponent = ({ user, initialBarbers }) => {
   const [availabilityData, setAvailabilityData] = useState([]);
   const [selectedDayToAdd, setSelectedDayToAdd] = useState("0");
 
-  // Search Filter
   const filteredBarbers = (barbers || []).filter(b => {
     const search = searchTerm.toLowerCase();
     return (
@@ -31,12 +31,10 @@ const BarbersComponent = ({ user, initialBarbers }) => {
     );
   });
 
-  // --- New Admin Actions for Days ---
   const handleAddDay = () => {
     const dayIndex = parseInt(selectedDayToAdd);
-    // Prevent adding the same day twice
     if (availabilityData.some(a => a.dayOfWeek === dayIndex)) {
-      alert("This day is already added to the schedule.");
+      notify.error("This day is already added to the schedule.");
       return;
     }
 
@@ -47,7 +45,6 @@ const BarbersComponent = ({ user, initialBarbers }) => {
       isActive: true
     };
 
-    // Add and sort by day of week
     setAvailabilityData([...availabilityData, newDay].sort((a, b) => a.dayOfWeek - b.dayOfWeek));
   };
 
@@ -93,6 +90,8 @@ const BarbersComponent = ({ user, initialBarbers }) => {
     const method = editingBarber ? 'PUT' : 'POST';
     const finalUrl = editingBarber ? `${baseUrl}/${editingBarber.id}` : baseUrl;
 
+    notify.loading("Saving barber details...");
+
     try {
       const response = await fetch(finalUrl, {
         method: method,
@@ -105,7 +104,6 @@ const BarbersComponent = ({ user, initialBarbers }) => {
       if (result.success) {
         const barberId = editingBarber ? editingBarber.id : result.data.id;
 
-        // Save only the added working days
         await fetch(`${baseUrl}/${barberId}/availability`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user.token}` },
@@ -116,10 +114,16 @@ const BarbersComponent = ({ user, initialBarbers }) => {
           headers: { 'Authorization': `Bearer ${user.token}` }
         });
         const refreshData = await refreshRes.json();
+
+        notify.dismiss();
+
         if (refreshData.success) setBarbers(refreshData.data);
 
         setShowModal(false);
-        alert("Barber saved successfully!");
+        notify.success("Barber and schedule saved successfully!");
+      } else {
+        notify.dismiss();
+        notify.error(result.message || "Failed to save barber.");
       }
     } catch (error) {
       console.error("Admin Save Error:", error);
@@ -127,20 +131,24 @@ const BarbersComponent = ({ user, initialBarbers }) => {
   };
 
   const handleDeleteConfirm = async () => {
+    notify.loading("Removing staff member...");
     try {
       const response = await fetch(`http://localhost:5085/api/Barbers/${deletingBarberId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${user.token}` }
       });
+      notify.dismiss();
       if (response.ok) {
         setBarbers(barbers.filter(b => b.id !== deletingBarberId));
         setShowDeleteModal(false);
+        notify.success("Barber removed successfully.");
+      } else {
+        notify.error("Could not delete barber. They may have active appointments.");
       }
     } catch (error) { console.error(error); }
   };
 
   const handleAddWeekdays = () => {
-    // Day indexes for Mon (1) through Fri (5)
     const weekdays = [1, 2, 3, 4, 5];
     
     const newDays = weekdays
@@ -153,17 +161,21 @@ const BarbersComponent = ({ user, initialBarbers }) => {
       }));
 
     if (newDays.length === 0) {
-      alert("All weekdays are already in the schedule.");
+      notify.error("All weekdays are already in the schedule.");
       return;
     }
 
     setAvailabilityData([...availabilityData, ...newDays].sort((a, b) => a.dayOfWeek - b.dayOfWeek));
   };
 
-  const handleClearAll = () => {
-    if (window.confirm("Are you sure you want to clear the entire schedule?")) {
-      setAvailabilityData([]);
-    }
+  const handleClearAllTrigger = () => {
+    setShowClearScheduleModal(true);
+  };
+
+  const confirmClearAll = () => {
+    setAvailabilityData([]);
+    setShowClearScheduleModal(false);
+    notify.success("Schedule cleared. Don't forget to save changes!");
   };
 
   return (
@@ -286,7 +298,7 @@ const BarbersComponent = ({ user, initialBarbers }) => {
                         <button type="button" className="btn btn-sm btn-outline-secondary" onClick={handleAddWeekdays}>
                           + Add Mon-Fri
                         </button>
-                        <button type="button" className="btn btn-sm btn-outline-danger" onClick={handleClearAll}>
+                        <button type="button" className="btn btn-sm btn-outline-danger" onClick={handleClearAllTrigger}>
                           Clear All
                         </button>
                       </div>
@@ -364,6 +376,38 @@ const BarbersComponent = ({ user, initialBarbers }) => {
               <div className="d-flex justify-content-center gap-2 mt-3">
                 <button className="btn btn-light" onClick={() => setShowDeleteModal(false)}>Cancel</button>
                 <button className="btn btn-danger" onClick={handleDeleteConfirm}>Delete</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showClearScheduleModal && (
+        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1100 }}>
+          <div className="modal-dialog modal-dialog-centered modal-sm">
+            <div className="modal-content border-0 shadow-lg text-center p-4">
+              <div className="text-warning mb-3">
+                <i className="bi bi-calendar-x-fill" style={{ fontSize: '3rem' }}></i>
+              </div>
+              <h5 className="fw-bold">Clear Schedule?</h5>
+              <p className="small text-muted">
+                This will remove all working hours from the list below. You will need to click "Save All Changes" to update the database.
+              </p>
+              <div className="d-grid gap-2 mt-4">
+                <button 
+                  type="button" 
+                  className="btn btn-warning fw-bold text-white" 
+                  onClick={confirmClearAll}
+                >
+                  Clear Everything
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-light" 
+                  onClick={() => setShowClearScheduleModal(false)}
+                >
+                  Go Back
+                </button>
               </div>
             </div>
           </div>

@@ -1,295 +1,482 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import styles from '../../../styles/Invoices.module.css';
+import { notify } from '../../../utils/notify';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faEye, faTrashAlt, faPlus, faCalendarCheck } from '@fortawesome/free-solid-svg-icons';
 
 const InvoicesComponent = ({ user, initialInvoices }) => {
-  const [invoices, setInvoices] = useState(initialInvoices || []);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showModal, setShowModal] = useState(false);
-  const [editingInvoice, setEditingInvoice] = useState(null);
-  const [isClient, setIsClient] = useState(false);
+    const [invoices, setInvoices] = useState(initialInvoices || []);
+    const [clients, setClients] = useState([]);
+    const [services, setServices] = useState([]);
+    const [appointments, setAppointments] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
 
-  // Modals States
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [invoiceToDelete, setInvoiceToDelete] = useState(null);
-  const [viewModalOpen, setViewModalOpen] = useState(false);
-  const [selectedInvoice, setSelectedInvoice] = useState(null);
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [selectedInvoice, setSelectedInvoice] = useState(null);
+    const [deletingInvoiceId, setDeletingInvoiceId] = useState(null);
 
-  const invoiceRef = useRef();
+    const [newInvoice, setNewInvoice] = useState({
+        clientId: '',
+        appointmentId: '',
+        items: [{ description: '', quantity: 1, unitPrice: 0 }]
+    });
 
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
+    useEffect(() => {
+        const loadInitialData = async () => {
+            await Promise.all([
+                fetchInvoices(),
+                fetchClients(),
+                fetchServices(),
+                fetchAppointments()
+            ]);
 
-  const [formData, setFormData] = useState({
-    invoiceNumber: '',
-    clientName: '',
-    amount: 0,
-    status: 'Unpaid',
-    dueDate: new Date().toISOString().split('T')[0]
-  });
+            // URL PARAMETER LOGIC: Auto-fill if coming from Appointment page
+            const urlParams = new URLSearchParams(window.location.search);
+            const apptId = urlParams.get('appointmentId');
+            const cId = urlParams.get('clientId');
 
-  const filteredInvoices = invoices.filter(inv =>
-    inv.invoiceNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    inv.clientName?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+            if (apptId || cId) {
+                setNewInvoice(prev => ({
+                    ...prev,
+                    clientId: cId || '',
+                    appointmentId: apptId || ''
+                }));
+                setShowAddModal(true);
+            }
+        };
 
-  const downloadPDF = () => {
-    const html2pdf = require('html2pdf.js');
-    const element = invoiceRef.current;
-    const opt = {
-      margin: 0.5,
-      filename: `Invoice_${selectedInvoice.invoiceNumber}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+        loadInitialData();
+    }, []);
+
+    const fetchInvoices = async () => {
+        try {
+            const res = await fetch('http://localhost:5085/api/Invoices', {
+                headers: { 'Authorization': `Bearer ${user.token}` }
+            });
+            const result = await res.json();
+            if (result.success) setInvoices(result.data);
+        } catch (error) {
+            notify.error("Failed to load invoices");
+        } finally {
+            setLoading(false);
+        }
     };
-    html2pdf().set(opt).from(element).save();
-  };
 
-  const handleOpenModal = (invoice = null) => {
-    if (invoice) {
-      setEditingInvoice(invoice);
-      setFormData({ ...invoice, dueDate: invoice.dueDate.split('T')[0] });
-    } else {
-      setEditingInvoice(null);
-      setFormData({ invoiceNumber: '', clientName: '', amount: 0, status: 'Unpaid', dueDate: new Date().toISOString().split('T')[0] });
-    }
-    setShowModal(true);
-  };
-
-  const handleViewInvoice = (invoice) => {
-    setSelectedInvoice(invoice);
-    setViewModalOpen(true);
-  };
-
-  const confirmDelete = (invoice) => {
-    setInvoiceToDelete(invoice);
-    setDeleteModalOpen(true);
-  };
-
-  const handleDelete = async () => {
-    if (!invoiceToDelete) return;
-    try {
-      const res = await fetch(`http://localhost:5085/api/Invoices/${invoiceToDelete.invoiceNumber}`, 
-        { 
-          method: 'DELETE', 
-          headers: { 'Authorization': `Bearer ${user.token}` } 
+    const fetchClients = async () => {
+        try {
+            const res = await fetch('http://localhost:5085/api/Clients', {
+                headers: { 'Authorization': `Bearer ${user.token}` }
+            });
+            const result = await res.json();
+            if (result.success) setClients(result.data);
+        } catch (error) {
+            console.error("Error fetching clients", error);
         }
-      );
-      const result = await res.json();
-      if (result.success) {
-        setInvoices(invoices.filter(inv => inv.invoiceNumber !== invoiceToDelete.invoiceNumber));
-        setDeleteModalOpen(false);
-        setInvoiceToDelete(null);
-      }
-    } catch (error) { console.error("Error deleting:", error); }
-  };
+    };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const url = 'http://localhost:5085/api/Invoices';
-    const method = editingInvoice ? 'PUT' : 'POST';
-    const finalUrl = editingInvoice ? `${url}/${editingInvoice.invoiceNumber}` : url;
+    const fetchServices = async () => {
+        try {
+            const res = await fetch('http://localhost:5085/api/Services', {
+                headers: { 'Authorization': `Bearer ${user.token}` }
+            });
+            const result = await res.json();
+            if (result.success) setServices(result.data);
+        } catch (error) {
+            console.error("Error fetching services", error);
+        }
+    };
 
-    try {
-      const response = await fetch(finalUrl, {
-        method: method,
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user.token}`
-        },
-        body: JSON.stringify(formData),
-      });
-      const result = await response.json();
-      if (result.success) {
-        if (editingInvoice) {
-          setInvoices(invoices.map(inv => inv.invoiceNumber === editingInvoice.invoiceNumber ? result.data : inv));
+    const fetchAppointments = async () => {
+        try {
+            const res = await fetch('http://localhost:5085/api/Appointments', {
+                headers: { 'Authorization': `Bearer ${user.token}` }
+            });
+            const result = await res.json();
+            if (result.success) setAppointments(result.data);
+        } catch (error) {
+            console.error("Error fetching appointments", error);
+        }
+    };
+
+    const handleAddItem = () => {
+        setNewInvoice({
+            ...newInvoice,
+            items: [...newInvoice.items, { description: '', quantity: 1, unitPrice: 0 }]
+        });
+    };
+
+    const handleRemoveItem = (index) => {
+        const updatedItems = newInvoice.items.filter((_, i) => i !== index);
+        setNewInvoice({ ...newInvoice, items: updatedItems });
+    };
+
+    const handleItemChange = (index, field, value) => {
+        const updatedItems = [...newInvoice.items];
+        if (field === 'serviceSelect') {
+            const selectedService = services.find(s => s.id.toString() === value);
+            if (selectedService) {
+                updatedItems[index].description = selectedService.name;
+                updatedItems[index].unitPrice = selectedService.price;
+            }
         } else {
-          setInvoices([...invoices, result.data]);
+            updatedItems[index][field] = value;
         }
-        setShowModal(false);
-      }
-    } catch (error) { console.error("Error saving:", error); }
-  };
+        setNewInvoice({ ...newInvoice, items: updatedItems });
+    };
 
-  return (
-    <div className={styles.content}>
-      <div className={styles.actionBar}>
-        <input 
-          type="text" 
-          placeholder="Search by Inv# or Client..." 
-          className="form-control w-50 shadow-sm" 
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)} 
-        />
-        <button className="btn btn-primary" onClick={() => handleOpenModal()}>+ Add New Invoice</button>
-      </div>
+    const calculateTotal = () => {
+        return newInvoice.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+    };
 
-      <div className="card shadow-sm border-0 mt-3">
-        <div className="card-body p-0">
-          <div className="table-responsive">
-            <table className="table table-hover align-middle mb-0">
-              <thead className="table-light">
-                <tr>
-                  <th className="ps-4">Inv #</th>
-                  <th>Client</th>
-                  <th>Amount</th>
-                  <th>Status</th>
-                  <th className="d-none d-md-table-cell">Due Date</th>
-                  <th className="text-end pe-4">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredInvoices.map((inv) => (
-                  <tr key={inv.invoiceNumber}>
-                    <td className="ps-4"><strong>{inv.invoiceNumber}</strong></td>
-                    <td>{inv.clientName}</td>
-                    <td>${inv.amount.toFixed(2)}</td>
-                    <td>
-                      <span className={`badge rounded-pill ${inv.status === 'Paid' ? 'bg-success' : 'bg-warning text-dark'}`}>
-                        {inv.status}
-                      </span>
-                    </td>
-                    <td className="d-none d-md-table-cell">
-                      {isClient ? new Date(inv.dueDate).toLocaleDateString() : ""}
-                    </td>
-                    <td className="text-end pe-4">
-                      <button className="btn btn-sm btn-outline-info me-2 shadow-sm" onClick={() => handleViewInvoice(inv)}>View</button>
-                      <button className="btn btn-sm btn-outline-primary me-2 shadow-sm" onClick={() => handleOpenModal(inv)}>Edit</button>
-                      <button className="btn btn-sm btn-outline-danger shadow-sm" onClick={() => confirmDelete(inv)}>Delete</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+    const handleCreateInvoice = async (e) => {
+        e.preventDefault();
+        if (!newInvoice.clientId) return notify.error("Please select a client");
 
-      {/* --- ALL MODALS (VIEW, EDIT, DELETE) STAY HERE --- */}
-      {/* (Keep the same Modal code you had previously below) */}
-      
-      {/* ... View Modal ... */}
-      {viewModalOpen && selectedInvoice && (
-        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
-          {/* Modal content as before */}
-           <div className="modal-dialog modal-lg modal-dialog-centered">
-            <div className="modal-content border-0 shadow">
-               <div className="modal-header border-0 pb-0">
-                 <h5 className="modal-title fw-bold ms-3 mt-2">Invoice Preview</h5>
-                 <button type="button" className="btn-close" onClick={() => setViewModalOpen(false)}></button>
-               </div>
-               <div className="modal-body p-5">
-                 <div ref={invoiceRef} className="p-4 bg-white" style={{ color: '#333' }}>
-                    {/* Inner invoice content */}
-                    <div className="d-flex justify-content-between mb-5 border-bottom pb-4">
-                      <div>
-                        <h1 className="fw-bold text-primary mb-0">INVOICE</h1>
-                        <p className="text-muted small">No: {selectedInvoice.invoiceNumber}</p>
-                      </div>
-                      <div className="text-end">
-                        <h4 className="fw-bold mb-0">ADMIN PORTAL</h4>
-                        <p className="small text-muted mb-0">billing@yourdomain.com</p>
-                      </div>
-                    </div>
-                    {/* ... rest of the preview ... */}
-                    <div className="row mb-5">
-                       <div className="col-6">
-                         <p className="text-muted small text-uppercase fw-bold mb-1">Billed To</p>
-                         <h5 className="fw-bold">{selectedInvoice.clientName}</h5>
-                       </div>
-                       <div className="col-6 text-end">
-                         <p className="text-muted small text-uppercase fw-bold mb-1">Due Date</p>
-                         <h5 className="fw-bold">{new Date(selectedInvoice.dueDate).toLocaleDateString()}</h5>
-                       </div>
-                    </div>
-                    <table className="table table-bordered mb-4">
-                       <thead className="table-light">
-                         <tr>
-                           <th>Description</th>
-                           <th className="text-end" style={{ width: '150px' }}>Total</th>
-                         </tr>
-                       </thead>
-                       <tbody>
-                         <tr>
-                           <td className="py-3">Professional Services - {selectedInvoice.invoiceNumber}</td>
-                           <td className="text-end py-3">${selectedInvoice.amount.toFixed(2)}</td>
-                         </tr>
-                       </tbody>
-                    </table>
-                 </div>
-               </div>
-               <div className="modal-footer bg-light border-0">
-                 <button className="btn btn-secondary px-4" onClick={() => setViewModalOpen(false)}>Close</button>
-                 <button className="btn btn-primary px-4" onClick={downloadPDF}>Download PDF</button>
-               </div>
-            </div>
-           </div>
-        </div>
-      )}
+        const payload = {
+            clientId: parseInt(newInvoice.clientId),
+            appointmentId: newInvoice.appointmentId ? parseInt(newInvoice.appointmentId) : null,
+            items: newInvoice.items.map(item => ({
+                description: item.description,
+                quantity: parseInt(item.quantity),
+                unitPrice: parseFloat(item.unitPrice)
+            }))
+        };
 
-      {/* ... Add/Edit Modal ... */}
-      {showModal && (
-        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-           <div className="modal-dialog modal-dialog-centered">
-             <div className="modal-content border-0 shadow-lg">
-                <form onSubmit={handleSubmit}>
-                   <div className="modal-header">
-                     <h5 className="modal-title fw-bold">{editingInvoice ? 'Edit Invoice' : 'Create Invoice'}</h5>
-                     <button type="button" className="btn-close" onClick={() => setShowModal(false)}></button>
-                   </div>
-                   <div className="modal-body p-4">
-                     {/* Form fields same as before */}
-                     <div className="mb-3">
-                        <label className="form-label small text-muted">Client Name</label>
-                        <input type="text" className="form-control" value={formData.clientName} onChange={(e) => setFormData({...formData, clientName: e.target.value})} required />
-                     </div>
-                     <div className="row">
-                        <div className="col-6 mb-3">
-                           <label className="form-label small text-muted">Amount</label>
-                           <input type="number" step="0.01" className="form-control" value={formData.amount} onChange={(e) => setFormData({...formData, amount: parseFloat(e.target.value)})} required />
-                        </div>
-                        <div className="col-6 mb-3">
-                           <label className="form-label small text-muted">Status</label>
-                           <select className="form-select" value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})}>
-                             <option value="Unpaid">Unpaid</option>
-                             <option value="Paid">Paid</option>
-                             <option value="Overdue">Overdue</option>
-                           </select>
-                        </div>
-                     </div>
-                     <div className="mb-3">
-                        <label className="form-label small text-muted">Due Date</label>
-                        <input type="date" className="form-control" value={formData.dueDate} onChange={(e) => setFormData({...formData, dueDate: e.target.value})} required />
-                     </div>
-                   </div>
-                   <div className="modal-footer bg-light border-0">
-                     <button type="button" className="btn btn-light px-4" onClick={() => setShowModal(false)}>Cancel</button>
-                     <button type="submit" className="btn btn-primary px-4">{editingInvoice ? 'Update' : 'Create'}</button>
-                   </div>
-                </form>
-             </div>
-           </div>
-        </div>
-      )}
+        notify.loading("Generating invoice...");
+        try {
+            const res = await fetch('http://localhost:5085/api/Invoices', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${user.token}` 
+                },
+                body: JSON.stringify(payload)
+            });
 
-      {/* ... Delete Modal ... */}
-      {deleteModalOpen && (
-        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
-           <div className="modal-dialog modal-dialog-centered modal-sm">
-             <div className="modal-content border-0 shadow text-center p-4">
-                <h5 className="mb-2">Are you sure?</h5>
-                <p className="text-muted small">Delete invoice <strong>{invoiceToDelete?.invoiceNumber}</strong>?</p>
-                <div className="d-flex justify-content-center gap-2 mt-4">
-                  <button className="btn btn-light px-3" onClick={() => setDeleteModalOpen(false)}>Cancel</button>
-                  <button className="btn btn-danger px-3" onClick={handleDelete}>Delete Now</button>
+            const result = await res.json();
+            notify.dismiss();
+            if (result.success) {
+                notify.success("Invoice created successfully!");
+                setShowAddModal(false);
+                setNewInvoice({ clientId: '', appointmentId: '', items: [{ description: '', quantity: 1, unitPrice: 0 }] });
+                fetchInvoices();
+            }
+        } catch (error) {
+            notify.dismiss();
+            notify.error("Connection error");
+        }
+    };
+
+    const handleUpdateStatus = async (id, currentStatus) => {
+        const nextStatus = currentStatus === 'Pending' ? 'Paid' : 'Pending';
+        notify.loading("Updating status...");
+        try {
+            const res = await fetch(`http://localhost:5085/api/Invoices/${id}/status`, {
+                method: 'PATCH',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${user.token}` 
+                },
+                body: JSON.stringify(nextStatus)
+            });
+            if (res.ok) {
+                notify.dismiss();
+                notify.success(`Status: ${nextStatus}`);
+                fetchInvoices();
+            }
+        } catch (error) {
+            notify.dismiss();
+            notify.error("Update failed");
+        }
+    };
+
+    const handleDeleteInvoice = async () => {
+        if (!deletingInvoiceId) return;
+        notify.loading("Deleting invoice...");
+        try {
+            const res = await fetch(`http://localhost:5085/api/Invoices/${deletingInvoiceId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${user.token}` }
+            });
+
+            if (res.ok) {
+                notify.dismiss();
+                notify.success("Invoice deleted");
+                setDeletingInvoiceId(null);
+                fetchInvoices();
+            }
+        } catch (error) {
+            notify.dismiss();
+            notify.error("Connection error");
+        }
+    };
+
+    const filteredInvoices = invoices.filter(inv => 
+        inv.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        inv.client?.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return (
+        <div className={styles.content}>
+            {/* Header Area */}
+            <div className={styles.actionBar}>
+                <h3 className="fw-bold">Invoices</h3>
+                <div className="d-flex gap-2 w-50">
+                    <input 
+                        type="text" 
+                        className="form-control shadow-sm" 
+                        placeholder="Search invoices..." 
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                    <button className="btn btn-primary text-nowrap" onClick={() => setShowAddModal(true)}>
+                        <FontAwesomeIcon icon={faPlus} className="me-2" /> New Invoice
+                    </button>
                 </div>
-             </div>
-           </div>
+            </div>
+
+            {/* Invoices Table */}
+            <div className="card border-0 shadow-sm mt-4">
+                <div className="card-body p-0">
+                    <div className="table-responsive">
+                        <table className="table table-hover align-middle mb-0">
+                            <thead className="table-light">
+                                <tr>
+                                    <th className="ps-4">Invoice #</th>
+                                    <th>Client</th>
+                                    <th>Date</th>
+                                    <th>Total</th>
+                                    <th>Status</th>
+                                    <th className="text-end pe-4">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {loading ? (
+                                    <tr><td colSpan="6" className="text-center py-5">Loading invoices...</td></tr>
+                                ) : filteredInvoices.map((inv) => (
+                                    <tr key={inv.id}>
+                                        <td className="ps-4 fw-bold text-primary">{inv.invoiceNumber}</td>
+                                        <td>
+                                            <div className="fw-bold">{inv.client?.name}</div>
+                                            <div className="small text-muted">{inv.client?.email}</div>
+                                        </td>
+                                        <td>{new Date(inv.issueDate).toLocaleDateString()}</td>
+                                        <td className="fw-bold">${inv.totalAmount.toFixed(2)}</td>
+                                        <td>
+                                            <span className={inv.status === 'Paid' ? styles.statusPaid : styles.statusPending}>
+                                                {inv.status}
+                                            </span>
+                                        </td>
+                                        <td className="text-end pe-4">
+                                            <button 
+                                                className={`btn btn-sm me-2 ${inv.status === 'Pending' ? 'btn-success' : 'btn-outline-secondary'}`}
+                                                onClick={() => handleUpdateStatus(inv.id, inv.status)}
+                                            >
+                                                {inv.status === 'Pending' ? 'Mark Paid' : 'Set Pending'}
+                                            </button>
+                                            <button 
+                                                className="btn btn-sm btn-outline-primary me-2"
+                                                onClick={() => setSelectedInvoice(inv)}
+                                            >
+                                                <FontAwesomeIcon icon={faEye} />
+                                            </button>
+                                            <button 
+                                                className="btn btn-sm btn-outline-danger"
+                                                onClick={() => setDeletingInvoiceId(inv.id)}
+                                            >
+                                                <FontAwesomeIcon icon={faTrashAlt} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            {/* Create Invoice Modal */}
+            {showAddModal && (
+                <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>
+                    <div className="modal-dialog modal-lg modal-dialog-centered">
+                        <div className="modal-content border-0 shadow-lg">
+                            <form onSubmit={handleCreateInvoice}>
+                                <div className="modal-header bg-light">
+                                    <h5 className="fw-bold mb-0">Create New Invoice</h5>
+                                    <button type="button" className="btn-close" onClick={() => setShowAddModal(false)}></button>
+                                </div>
+                                <div className="modal-body p-4">
+                                    <div className="row mb-4">
+                                        <div className="col-md-6">
+                                            <label className="form-label fw-bold">Select Client</label>
+                                            <select 
+                                                className="form-select border-2" 
+                                                required
+                                                value={newInvoice.clientId}
+                                                onChange={(e) => setNewInvoice({...newInvoice, clientId: e.target.value})}
+                                            >
+                                                <option value="">-- Choose Client --</option>
+                                                {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="d-flex justify-content-between align-items-center mb-2">
+                                        <label className="form-label fw-bold mb-0">Services & Products</label>
+                                        <button type="button" className="btn btn-sm btn-primary" onClick={handleAddItem}>
+                                            <FontAwesomeIcon icon={faPlus} className="me-1" /> Add Row
+                                        </button>
+                                    </div>
+                                    
+                                    <div className="table-responsive">
+                                        <table className="table table-sm border">
+                                            <thead className="table-light">
+                                                <tr className="small text-muted">
+                                                    <th className="ps-3" style={{width: '200px'}}>Select Service</th>
+                                                    <th>Description</th>
+                                                    <th style={{width: '80px'}}>Qty</th>
+                                                    <th style={{width: '120px'}}>Price</th>
+                                                    <th style={{width: '50px'}} className="text-center"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {newInvoice.items.map((item, index) => (
+                                                    <tr key={index}>
+                                                        <td className="ps-2">
+                                                            <select 
+                                                                className="form-select form-select-sm border-0"
+                                                                onChange={(e) => handleItemChange(index, 'serviceSelect', e.target.value)}
+                                                            >
+                                                                <option value="">-- Pick --</option>
+                                                                {services.map(s => (
+                                                                    <option key={s.id} value={s.id}>{s.name}</option>
+                                                                ))}
+                                                            </select>
+                                                        </td>
+                                                        <td>
+                                                            <input type="text" className="form-control form-control-sm border-0" placeholder="Description" required
+                                                                value={item.description} onChange={(e) => handleItemChange(index, 'description', e.target.value)} />
+                                                        </td>
+                                                        <td>
+                                                            <input type="number" className="form-control form-control-sm border-0 text-center" min="1" required
+                                                                value={item.quantity} onChange={(e) => handleItemChange(index, 'quantity', e.target.value)} />
+                                                        </td>
+                                                        <td>
+                                                            <input type="number" step="0.01" className="form-control form-control-sm border-0" required
+                                                                value={item.unitPrice} onChange={(e) => handleItemChange(index, 'unitPrice', e.target.value)} />
+                                                        </td>
+                                                        <td className="text-center">
+                                                            <button type="button" className="btn btn-link text-danger p-0" onClick={() => handleRemoveItem(index)}>
+                                                                <FontAwesomeIcon icon={faTrashAlt} />
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <div className="text-end mt-3 p-3 bg-light rounded">
+                                        <span className="text-muted me-3">Grand Total:</span>
+                                        <span className="h3 fw-bold text-primary">${calculateTotal().toFixed(2)}</span>
+                                    </div>
+                                </div>
+                                <div className="modal-footer border-0">
+                                    <button type="button" className="btn btn-outline-secondary px-4" onClick={() => setShowAddModal(false)}>Cancel</button>
+                                    <button type="submit" className="btn btn-primary px-5 fw-bold">Save Invoice</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* View Details Modal */}
+            {selectedInvoice && (
+                <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1060 }}>
+                    <div className="modal-dialog modal-md modal-dialog-centered">
+                        <div className="modal-content border-0 shadow-lg">
+                            <div className="modal-header border-0 pb-0">
+                                <button type="button" className="btn-close" onClick={() => setSelectedInvoice(null)}></button>
+                            </div>
+                            <div className="modal-body px-4 pb-4">
+                                <div className="text-center mb-4">
+                                    <div className="h4 fw-bold text-uppercase mb-1">Receipt</div>
+                                    <div className="text-muted small">Invoice #: {selectedInvoice.invoiceNumber}</div>
+                                    {selectedInvoice.appointmentId && (
+                                        <div className="badge bg-light text-dark border mt-2">
+                                            <FontAwesomeIcon icon={faCalendarCheck} className="me-1" />
+                                            Linked to Appointment #{selectedInvoice.appointmentId}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="row mb-4">
+                                    <div className="col-6">
+                                        <div className="text-muted small">Billed To:</div>
+                                        <div className="fw-bold">{selectedInvoice.client?.name}</div>
+                                        <div className="small">{selectedInvoice.client?.email}</div>
+                                    </div>
+                                    <div className="col-6 text-end">
+                                        <div className="text-muted small">Date Issued:</div>
+                                        <div className="fw-bold">{new Date(selectedInvoice.issueDate).toLocaleDateString()}</div>
+                                        <div className={`small fw-bold ${selectedInvoice.status === 'Paid' ? 'text-success' : 'text-warning'}`}>
+                                            Status: {selectedInvoice.status}
+                                        </div>
+                                    </div>
+                                </div>
+                                <table className="table table-sm border-top border-bottom">
+                                    <thead>
+                                        <tr className="text-muted small">
+                                            <th>Description</th>
+                                            <th className="text-center">Qty</th>
+                                            <th className="text-end">Price</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {selectedInvoice.items?.map((item, idx) => (
+                                            <tr key={idx}>
+                                                <td className="py-2">{item.description}</td>
+                                                <td className="py-2 text-center">{item.quantity}</td>
+                                                <td className="py-2 text-end">${item.unitPrice.toFixed(2)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                                <div className="d-flex justify-content-between align-items-center mt-3 px-2">
+                                    <div className="h5 fw-bold mb-0">Total Amount</div>
+                                    <div className="h4 fw-bold text-primary mb-0">${selectedInvoice.totalAmount.toFixed(2)}</div>
+                                </div>
+                            </div>
+                            <div className="modal-footer border-0">
+                                <button className="btn btn-light w-100" onClick={() => window.print()}>Print Receipt</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {deletingInvoiceId && (
+                <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1100 }}>
+                    <div className="modal-dialog modal-sm modal-dialog-centered">
+                        <div className="modal-content border-0 shadow">
+                            <div className="modal-body text-center p-4">
+                                <div className="text-danger mb-3">
+                                    <FontAwesomeIcon icon={faTrashAlt} size="3x" />
+                                </div>
+                                <h5 className="fw-bold">Delete Invoice?</h5>
+                                <div className="d-flex gap-2">
+                                    <button className="btn btn-light flex-fill" onClick={() => setDeletingInvoiceId(null)}>Cancel</button>
+                                    <button className="btn btn-danger flex-fill" onClick={handleDeleteInvoice}>Delete</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
-      )}
-    </div>
-  );
+    );
 };
 
 export default InvoicesComponent;

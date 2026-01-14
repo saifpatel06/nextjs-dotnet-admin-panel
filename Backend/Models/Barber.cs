@@ -13,7 +13,7 @@ namespace AdminPanelAPI.Models
         public string Name { get; set; }
 
         [Required]
-        public string Role { get; set; } // e.g., Master Barber, Stylist
+        public string Role { get; set; } 
 
         [Required]
         [Phone]

@@ -1,24 +1,21 @@
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+using System;
+using System.Collections.Generic;
 
 namespace AdminPanelAPI.Models
 {
     public class Invoice
     {
-        [Key] 
-        [DatabaseGenerated(DatabaseGeneratedOption.None)] 
-        public string InvoiceNumber { get; set; } = string.Empty; 
-
-        [Required]
-        public string ClientName { get; set; } = string.Empty;
-
-        [Column(TypeName = "decimal(18,2)")]
-        public decimal Amount { get; set; }
-
-        public string Status { get; set; } = "Unpaid";
-
+        public int Id { get; set; }
+        public string InvoiceNumber { get; set; } = string.Empty;
+        public int ClientId { get; set; }
+        public Client? Client { get; set; }
+        public int? AppointmentId { get; set; }
+        public DateTime IssueDate { get; set; }
         public DateTime DueDate { get; set; }
+        public decimal TotalAmount { get; set; }
+        public string Status { get; set; } = "Pending";
         
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        // Navigation property for items
+        public List<InvoiceItem> Items { get; set; } = new List<InvoiceItem>();
     }
 }

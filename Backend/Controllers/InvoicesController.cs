@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using AdminPanelAPI.Data;
 using AdminPanelAPI.Models;
-using AdminPanelAPI.DTOs;
+using AdminPanelAPI.Dtos;
 using Microsoft.AspNetCore.Authorization;
 
 namespace AdminPanelAPI.Controllers
@@ -13,86 +13,94 @@ namespace AdminPanelAPI.Controllers
     public class InvoicesController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
-        public InvoicesController(ApplicationDbContext context) 
+
+        public InvoicesController(ApplicationDbContext context)
         {
             _context = context;
         }
 
-        [HttpGet]
-        public async Task<ActionResult<ApiResponse<IEnumerable<Invoice>>>> GetInvoices()
-        {
-            var data = await _context.Invoices.ToListAsync();
-            return Ok(new ApiResponse<IEnumerable<Invoice>> 
-            { 
-                Success = true, 
-                Data = data 
-            });
-        }
-
+        // 1. CREATE: Generate a new invoice
         [HttpPost]
-        public async Task<ActionResult<ApiResponse<Invoice>>> Create(InvoiceCreateDto dto)
+        public async Task<IActionResult> Create([FromBody] CreateInvoiceDto dto)
         {
-            try 
-            {
-                // 1. Calculate the next number based on current count
-                var count = await _context.Invoices.CountAsync();
-                string newInvoiceId = $"INV-{DateTime.Now.Year}-{(count + 1):D3}";
+            if (dto.Items == null || !dto.Items.Any())
+                return BadRequest(new { success = false, message = "Invoice must have at least one item." });
 
-                var invoice = new Invoice
+            var invNumber = $"INV-{DateTime.Now:yyyyMMdd}-{Guid.NewGuid().ToString().Substring(0, 4).ToUpper()}";
+
+            var invoice = new Invoice
+            {
+                InvoiceNumber = invNumber,
+                ClientId = dto.ClientId,
+                AppointmentId = dto.AppointmentId,
+                IssueDate = DateTime.UtcNow,
+                DueDate = DateTime.UtcNow.AddDays(3),
+                Status = "Pending",
+                TotalAmount = dto.Items.Sum(i => i.Quantity * i.UnitPrice),
+                Items = dto.Items.Select(i => new InvoiceItem
                 {
-                    InvoiceNumber = newInvoiceId, // Set the Key here
-                    ClientName = dto.ClientName,
-                    Amount = dto.Amount,
-                    Status = dto.Status,
-                    DueDate = dto.DueDate
-                };
+                    Description = i.Description,
+                    Quantity = i.Quantity,
+                    UnitPrice = i.UnitPrice
+                }).ToList()
+            };
 
-                _context.Invoices.Add(invoice);
-                await _context.SaveChangesAsync();
-
-                return Ok(new ApiResponse<Invoice> { Success = true, Data = invoice });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new ApiResponse<Invoice> { Success = false, Message = ex.Message });
-            }
-        }
-
-        [HttpPut("{id}")]
-        public async Task<ActionResult<ApiResponse<Invoice>>> Update(string id, InvoiceCreateDto dto)
-        {
-            var invoice = await _context.Invoices.FirstOrDefaultAsync(x => x.InvoiceNumber == id);
-            
-            if (invoice == null) 
-                return NotFound(new ApiResponse<Invoice> { Success = false, Message = "Not found" });
-
-            invoice.ClientName = dto.ClientName;
-            invoice.Amount = dto.Amount;
-            invoice.Status = dto.Status;
-            invoice.DueDate = dto.DueDate;
-
+            _context.Invoices.Add(invoice);
             await _context.SaveChangesAsync();
-            return Ok(new ApiResponse<Invoice> { Success = true, Data = invoice });
+            return Ok(new { success = true, data = invoice });
         }
 
-        [HttpDelete("{id}")]
-        public async Task<ActionResult<ApiResponse<bool>>> Delete(string id) // Changed int to string
+        // 2. GET ALL: List all invoices (with Client info)
+        [HttpGet]
+        public async Task<IActionResult> GetAll()
         {
-            // Find the invoice by the string InvoiceNumber
-            var invoice = await _context.Invoices.FirstOrDefaultAsync(x => x.InvoiceNumber == id);
-            
-            if (invoice == null) 
-            {
-                return NotFound(new ApiResponse<bool> { 
-                    Success = false, 
-                    Message = "Invoice not found" 
-                });
-            }
+            var invoices = await _context.Invoices
+                .Include(i => i.Client)
+                .Include(i => i.Items)
+                .OrderByDescending(i => i.IssueDate)
+                .ToListAsync();
+
+            return Ok(new { success = true, data = invoices });
+        }
+
+        // 3. GET BY ID: Fetch full details including line items
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(int id)
+        {
+            var invoice = await _context.Invoices
+                .Include(i => i.Client)
+                .Include(i => i.Items)
+                .FirstOrDefaultAsync(i => i.Id == id);
+
+            if (invoice == null) return NotFound(new { success = false, message = "Invoice not found" });
+
+            return Ok(new { success = true, data = invoice });
+        }
+
+        // 4. UPDATE STATUS: Change to "Paid" or "Cancelled"
+        [HttpPatch("{id}/status")]
+        public async Task<IActionResult> UpdateStatus(int id, [FromBody] string newStatus)
+        {
+            var invoice = await _context.Invoices.FindAsync(id);
+            if (invoice == null) return NotFound();
+
+            invoice.Status = newStatus;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { success = true, message = $"Invoice status updated to {newStatus}" });
+        }
+
+        // 5. DELETE: Remove an invoice
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var invoice = await _context.Invoices.FindAsync(id);
+            if (invoice == null) return NotFound();
 
             _context.Invoices.Remove(invoice);
             await _context.SaveChangesAsync();
-            
-            return Ok(new ApiResponse<bool> { Success = true, Data = true });
+
+            return Ok(new { success = true, message = "Invoice deleted" });
         }
     }
 }
