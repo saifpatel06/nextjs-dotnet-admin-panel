@@ -271,6 +271,14 @@ const BarbersComponent = ({ user, initialBarbers }) => {
                         <label className="small text-muted">Specialization</label>
                         <input type="text" className="form-control" value={formData.specialization} onChange={(e) => setFormData({ ...formData, specialization: e.target.value })} />
                       </div>
+                      <div className="col-md-12 mb-3">
+                        <label className="form-label small text-muted">Bio</label>
+                        <textarea className="form-control" rows="2" value={formData.bio} onChange={(e) => setFormData({...formData, bio: e.target.value})}></textarea>
+                      </div>
+                      <div className="col-md-12 mb-3">
+                          <label className="form-label small text-muted">Profile Image URL</label>
+                          <input type="text" className="form-control" value={formData.imageUrl} onChange={(e) => setFormData({...formData, imageUrl: e.target.value})} />
+                      </div>
                     </div>
                   ) : (
                     <div>

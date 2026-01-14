@@ -20,6 +20,8 @@ namespace AdminPanelAPI.Data
         public DbSet<BarberAvailability> BarberAvailabilities { get; set; }
 
         public DbSet<Service> Services { get; set; }
+
+        public DbSet<Appointment> Appointments { get; set; }
         
     }
 }

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { destroyCookie } from 'nookies';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUser, faGauge, faFileInvoice, faRightFromBracket } from '@fortawesome/free-solid-svg-icons';
+import { faGauge, faUserTie, faCut, faCalendarCheck, faUsers, faFileInvoice, faRightFromBracket } from '@fortawesome/free-solid-svg-icons';
 import styles from '../../../styles/Sidebar.module.css';
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
@@ -17,19 +17,25 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
     },
     { 
       name: 'Barbers', 
-      icon: faUser,
+      icon: faUserTie,
       path: '/dashboard/barbers',
       id: 'barber'
     },
     { 
       name: 'Services', 
-      icon: faUser,
+      icon: faCut,
       path: '/dashboard/services',
       id: 'barber'
     },
     { 
+      name: 'Appointment', 
+      icon: faCalendarCheck,
+      path: '/dashboard/appointments',
+      id: 'barber'
+    },
+    { 
       name: 'Clients', 
-      icon: faUser,
+      icon: faUsers,
       path: '/dashboard/clients',
       id: 'clients'
     },
