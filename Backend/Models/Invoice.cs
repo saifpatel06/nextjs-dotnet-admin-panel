@@ -5,7 +5,7 @@ namespace AdminPanelAPI.Models
 {
     public class Invoice
     {
-        [Key] // This is now the Primary Key
+        [Key] 
         [DatabaseGenerated(DatabaseGeneratedOption.None)] 
         public string InvoiceNumber { get; set; } = string.Empty; 
 

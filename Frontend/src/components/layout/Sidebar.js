@@ -22,6 +22,12 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       id: 'barber'
     },
     { 
+      name: 'Services', 
+      icon: faUser,
+      path: '/dashboard/services',
+      id: 'barber'
+    },
+    { 
       name: 'Clients', 
       icon: faUser,
       path: '/dashboard/clients',

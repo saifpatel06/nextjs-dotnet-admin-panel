@@ -65,7 +65,7 @@ namespace AdminPanelAPI.Controllers
                     Email = dto.Email,
                     Company = dto.Company,
                     Phone = dto.Phone,
-                    Status = "Active" // Default status
+                    Status = "Active" 
                 };
 
                 _context.Clients.Add(client);

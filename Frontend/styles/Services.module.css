@@ -1,0 +1,25 @@
+/* styles/Services.module.css */
+.content {
+  padding: 20px;
+}
+
+.actionBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.serviceCard {
+  transition: transform 0.2s;
+}
+
+.serviceCard:hover {
+  transform: translateY(-5px);
+}
+
+.categoryBadge {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}

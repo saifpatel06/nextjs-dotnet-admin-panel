@@ -1,16 +1,16 @@
 import Head from 'next/head';
 import nookies from 'nookies';
-import BarbersComponent from '../../src/components/dashboard/BarbersComponent.js';
+import ServicesComponent from '../../src/components/dashboard/ServicesComponent.js';
 import DashboardLayout from '../../src/components/layout/DashboardLayout'
 
-const Barbers = ({ user, initialBarbers }) => {
+const Services = ({ user, initialServices }) => {
   return (
     <>
       <Head>
-        <title>Barbers | Admin Panel</title>
+        <title>Services | Admin Panel</title>
       </Head>
       <DashboardLayout>
-        <BarbersComponent user={user} initialBarbers={initialBarbers} />
+        <ServicesComponent user={user} initialServices={initialServices} />
       </DashboardLayout>
     </>
   );
@@ -28,7 +28,7 @@ export const getServerSideProps = async (ctx) => {
   try {
     const user = JSON.parse(cookies.user_session);
 
-    const response = await fetch('http://localhost:5085/api/Barbers', {
+    const response = await fetch('http://localhost:5085/api/Services', {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${user.token}`,
@@ -45,7 +45,7 @@ export const getServerSideProps = async (ctx) => {
     return {
       props: { 
         user, 
-        initialBarbers: result.success ? result.data : [] 
+        initialServices: result.success ? result.data : [] 
       }
     };
   } catch (error) {
@@ -60,4 +60,4 @@ export const getServerSideProps = async (ctx) => {
   }
 };
 
-export default Barbers;
+export default Services;
