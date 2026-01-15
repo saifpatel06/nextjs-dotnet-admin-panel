@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import styles from '../../../styles/Invoices.module.css';
 import { notify } from '../../../utils/notify';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEye, faTrashAlt, faPlus, faCalendarCheck } from '@fortawesome/free-solid-svg-icons';
+import { faEye, faTrashAlt, faPlus, faCalendarCheck, faFileInvoiceDollar, faUserTag } from '@fortawesome/free-solid-svg-icons';
 
 const InvoicesComponent = ({ user, initialInvoices }) => {
     const [invoices, setInvoices] = useState(initialInvoices || []);
@@ -24,6 +24,7 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
 
     useEffect(() => {
         const loadInitialData = async () => {
+            setLoading(true);
             await Promise.all([
                 fetchInvoices(),
                 fetchClients(),
@@ -31,7 +32,7 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
                 fetchAppointments()
             ]);
 
-            // URL PARAMETER LOGIC: Auto-fill if coming from Appointment page
+            // URL PARAMETER LOGIC: Handle direct links from Appointments Page
             const urlParams = new URLSearchParams(window.location.search);
             const apptId = urlParams.get('appointmentId');
             const cId = urlParams.get('clientId');
@@ -42,13 +43,51 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
                     clientId: cId || '',
                     appointmentId: apptId || ''
                 }));
-                setShowAddModal(true);
+                if (apptId) {
+                    // We need to wait for appointments to load to auto-fill items
+                    // This logic is handled by a secondary check or by ensuring fetchAppointments is done
+                    setShowAddModal(true);
+                }
             }
+            setLoading(false);
         };
 
         loadInitialData();
     }, []);
 
+    // --- AUTO-FILL LOGIC ---
+    const handleClientChange = (selectedClientId) => {
+        // Update client ID and reset items/appt link
+        setNewInvoice(prev => ({
+            ...prev,
+            clientId: selectedClientId,
+            appointmentId: '', 
+            items: [{ description: '', quantity: 1, unitPrice: 0 }]
+        }));
+
+        if (!selectedClientId) return;
+
+        // Find if this client has an appointment (filtering for confirmed/pending)
+        const clientAppt = appointments.find(a => 
+            a.clientId.toString() === selectedClientId.toString() &&
+            (a.status !== 'Cancelled' && a.status !== 'Completed')
+        );
+
+        if (clientAppt) {
+            setNewInvoice(prev => ({
+                ...prev,
+                appointmentId: clientAppt.id,
+                items: [{ 
+                    description: clientAppt.serviceName || "Service Rendered", 
+                    quantity: 1, 
+                    unitPrice: clientAppt.price || 0 
+                }]
+            }));
+            notify.success(`Linked to Appointment #${clientAppt.id}`);
+        }
+    };
+
+    // --- API FETCHERS ---
     const fetchInvoices = async () => {
         try {
             const res = await fetch('http://localhost:5085/api/Invoices', {
@@ -56,11 +95,7 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
             });
             const result = await res.json();
             if (result.success) setInvoices(result.data);
-        } catch (error) {
-            notify.error("Failed to load invoices");
-        } finally {
-            setLoading(false);
-        }
+        } catch (error) { notify.error("Failed to load invoices"); }
     };
 
     const fetchClients = async () => {
@@ -70,9 +105,7 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
             });
             const result = await res.json();
             if (result.success) setClients(result.data);
-        } catch (error) {
-            console.error("Error fetching clients", error);
-        }
+        } catch (error) { console.error("Error fetching clients", error); }
     };
 
     const fetchServices = async () => {
@@ -82,9 +115,7 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
             });
             const result = await res.json();
             if (result.success) setServices(result.data);
-        } catch (error) {
-            console.error("Error fetching services", error);
-        }
+        } catch (error) { console.error("Error fetching services", error); }
     };
 
     const fetchAppointments = async () => {
@@ -94,11 +125,10 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
             });
             const result = await res.json();
             if (result.success) setAppointments(result.data);
-        } catch (error) {
-            console.error("Error fetching appointments", error);
-        }
+        } catch (error) { console.error("Error fetching appointments", error); }
     };
 
+    // --- ITEM MANAGEMENT ---
     const handleAddItem = () => {
         setNewInvoice({
             ...newInvoice,
@@ -129,6 +159,7 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
         return newInvoice.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
     };
 
+    // --- CREATE INVOICE ---
     const handleCreateInvoice = async (e) => {
         e.preventDefault();
         if (!newInvoice.clientId) return notify.error("Please select a client");
@@ -219,7 +250,6 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
 
     return (
         <div className={styles.content}>
-            {/* Header Area */}
             <div className={styles.actionBar}>
                 <h3 className="fw-bold">Invoices</h3>
                 <div className="d-flex gap-2 w-50">
@@ -236,7 +266,6 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
                 </div>
             </div>
 
-            {/* Invoices Table */}
             <div className="card border-0 shadow-sm mt-4">
                 <div className="card-body p-0">
                     <div className="table-responsive">
@@ -296,7 +325,7 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
                 </div>
             </div>
 
-            {/* Create Invoice Modal */}
+            {/* CREATE INVOICE MODAL */}
             {showAddModal && (
                 <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>
                     <div className="modal-dialog modal-lg modal-dialog-centered">
@@ -314,11 +343,27 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
                                                 className="form-select border-2" 
                                                 required
                                                 value={newInvoice.clientId}
-                                                onChange={(e) => setNewInvoice({...newInvoice, clientId: e.target.value})}
+                                                onChange={(e) => handleClientChange(e.target.value)}
                                             >
                                                 <option value="">-- Choose Client --</option>
                                                 {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                             </select>
+                                        </div>
+                                        <div className="col-md-6">
+                                            <label className="form-label fw-bold">Invoice Type</label>
+                                            <div className="d-flex align-items-center h-100 mt-1">
+                                                {newInvoice.appointmentId ? (
+                                                    <span className="badge bg-success-subtle text-success border border-success px-3 py-2">
+                                                        <FontAwesomeIcon icon={faCalendarCheck} className="me-2" />
+                                                        Linked to Appt #{newInvoice.appointmentId}
+                                                    </span>
+                                                ) : (
+                                                    <span className="badge bg-secondary-subtle text-secondary border border-secondary px-3 py-2">
+                                                        <FontAwesomeIcon icon={faUserTag} className="me-2" />
+                                                        Manual / Walk-in
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
 
@@ -348,7 +393,7 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
                                                                 className="form-select form-select-sm border-0"
                                                                 onChange={(e) => handleItemChange(index, 'serviceSelect', e.target.value)}
                                                             >
-                                                                <option value="">-- Pick --</option>
+                                                                <option value="">-- Quick Pick --</option>
                                                                 {services.map(s => (
                                                                     <option key={s.id} value={s.id}>{s.name}</option>
                                                                 ))}
@@ -392,7 +437,7 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
                 </div>
             )}
 
-            {/* View Details Modal */}
+            {/* VIEW RECEIPT MODAL */}
             {selectedInvoice && (
                 <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1060 }}>
                     <div className="modal-dialog modal-md modal-dialog-centered">
@@ -456,7 +501,7 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
                 </div>
             )}
 
-            {/* Delete Confirmation Modal */}
+            {/* DELETE MODAL */}
             {deletingInvoiceId && (
                 <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1100 }}>
                     <div className="modal-dialog modal-sm modal-dialog-centered">
