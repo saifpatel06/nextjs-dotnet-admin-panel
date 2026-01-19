@@ -4,7 +4,7 @@ import { notify } from '../../../utils/notify';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
     faEye, faEdit, faTrashAlt, faPlus, faCalendarCheck, 
-    faFileInvoiceDollar, faUserTag, faCreditCard, faMoneyBillWave 
+    faFileInvoiceDollar, faUserTag, faCreditCard, faMoneyBillWave, faUsers 
 } from '@fortawesome/free-solid-svg-icons';
 
 const InvoicesComponent = ({ user, initialInvoices }) => {
@@ -14,6 +14,7 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
     const [appointments, setAppointments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [showAllClients, setShowAllClients] = useState(false); // Toggle for walk-ins
 
     const [showAddModal, setShowAddModal] = useState(false);
     const [selectedInvoice, setSelectedInvoice] = useState(null);
@@ -55,35 +56,22 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
         loadInitialData();
     }, []);
 
-    const handleClientChange = (selectedClientId) => {
-        setNewInvoice(prev => ({
-            ...prev,
-            clientId: selectedClientId,
-            appointmentId: '', 
-            items: [{ description: '', quantity: 1, unitPrice: 0 }]
-        }));
+    // --- FILTERS ---
+    const todayStr = new Date().toISOString().split('T')[0];
 
-        if (!selectedClientId) return;
+    // Get clients who have an appointment today
+    const todaysClients = clients.filter(client => 
+        appointments.some(appt => 
+            appt.clientId === client.id && 
+            appt.appointmentDate?.startsWith(todayStr) && 
+            appt.status !== 'Cancelled'
+        )
+    );
 
-        const clientAppt = appointments.find(a => 
-            a.clientId.toString() === selectedClientId.toString() &&
-            (a.status !== 'Cancelled')
-        );
+    // Final list based on toggle
+    const clientOptions = showAllClients ? clients : todaysClients;
 
-        if (clientAppt) {
-            setNewInvoice(prev => ({
-                ...prev,
-                appointmentId: clientAppt.id,
-                items: [{ 
-                    description: clientAppt.serviceName || "Service Rendered", 
-                    quantity: 1, 
-                    unitPrice: clientAppt.price || 0 
-                }]
-            }));
-            notify.success(`Linked to Appointment #${clientAppt.id}`);
-        }
-    };
-
+    // --- API CALLS ---
     const fetchInvoices = async () => {
         try {
             const res = await fetch('http://localhost:5085/api/Invoices', {
@@ -122,6 +110,37 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
             const result = await res.json();
             if (result.success) setAppointments(result.data);
         } catch (error) { console.error("Error fetching appointments", error); }
+    };
+
+    // --- HANDLERS ---
+    const handleClientChange = (selectedClientId) => {
+        setNewInvoice(prev => ({
+            ...prev,
+            clientId: selectedClientId,
+            appointmentId: '', 
+            items: [{ description: '', quantity: 1, unitPrice: 0 }]
+        }));
+
+        if (!selectedClientId) return;
+
+        const clientAppt = appointments.find(a => 
+            a.clientId.toString() === selectedClientId.toString() &&
+            a.appointmentDate?.startsWith(todayStr) &&
+            (a.status !== 'Cancelled')
+        );
+
+        if (clientAppt) {
+            setNewInvoice(prev => ({
+                ...prev,
+                appointmentId: clientAppt.id,
+                items: [{ 
+                    description: clientAppt.serviceName || "Service Rendered", 
+                    quantity: 1, 
+                    unitPrice: clientAppt.price || 0 
+                }]
+            }));
+            notify.success(`Linked to Today's Appointment #${clientAppt.id}`);
+        }
     };
 
     const handleAddItem = () => {
@@ -212,6 +231,7 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
 
     const handleEditClick = (inv) => {
         setEditingInvoiceId(inv.id);
+        setShowAllClients(true); // Ensure client is visible if editing old invoice
         setNewInvoice({
             clientId: inv.clientId.toString(),
             appointmentId: inv.appointmentId ? inv.appointmentId.toString() : '',
@@ -289,6 +309,7 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
                     />
                     <button className="btn btn-primary text-nowrap" onClick={() => {
                         setEditingInvoiceId(null);
+                        setShowAllClients(false); // Reset to today's view for new invoices
                         setNewInvoice({ clientId: '', appointmentId: '', paymentMethod: 'Cash', discount: 0, items: [{ description: '', quantity: 1, unitPrice: 0 }] });
                         setShowAddModal(true);
                     }}>
@@ -356,24 +377,35 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
             {showAddModal && (
                 <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>
                     <div className="modal-dialog modal-lg modal-dialog-centered">
-                        <div className={`modal-content ${styles.receiptCard} print-section`}>
+                        <div className="modal-content border-0 shadow-lg">
                             <form onSubmit={handleCreateInvoice}>
                                 <div className="modal-header bg-light">
                                     <h5 className="fw-bold mb-0">{editingInvoiceId ? 'Edit Invoice' : 'Checkout & Invoice'}</h5>
                                     <button type="button" className="btn-close" onClick={() => setShowAddModal(false)}></button>
                                 </div>
                                 <div className="modal-body p-4">
-                                    <div className="row mb-4">
-                                        <div className="col-md-5">
-                                            <label className="form-label fw-bold">Select Client</label>
+                                    <div className="row mb-4 align-items-end">
+                                        <div className="col-md-6">
+                                            <div className="d-flex justify-content-between">
+                                                <label className="form-label fw-bold">Select Client</label>
+                                                <div className="form-check form-switch small">
+                                                    <input 
+                                                        className="form-check-input" 
+                                                        type="checkbox" 
+                                                        checked={showAllClients} 
+                                                        onChange={() => setShowAllClients(!showAllClients)}
+                                                    />
+                                                    <label className="form-check-label text-muted">Show All</label>
+                                                </div>
+                                            </div>
                                             <select 
                                                 className="form-select border-2" 
                                                 required
                                                 value={newInvoice.clientId}
                                                 onChange={(e) => handleClientChange(e.target.value)}
                                             >
-                                                <option value="">-- Choose Client --</option>
-                                                {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                                <option value="">-- {clientOptions.length > 0 ? 'Choose Client' : 'No clients found'} --</option>
+                                                {clientOptions.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                             </select>
                                         </div>
                                         <div className="col-md-4">
@@ -388,13 +420,12 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
                                                 <option value="Transfer">Bank Transfer</option>
                                             </select>
                                         </div>
-                                        <div className="col-md-3">
-                                            <label className="form-label fw-bold">Source</label>
-                                            <div className="mt-2">
+                                        <div className="col-md-2">
+                                            <div className="text-center pb-2">
                                                 {newInvoice.appointmentId ? (
-                                                    <span className="badge bg-success-subtle text-success border border-success">Linked Appt</span>
+                                                    <span className="badge bg-success-subtle text-success border border-success w-100 p-2">Linked</span>
                                                 ) : (
-                                                    <span className="badge bg-secondary-subtle text-secondary border border-secondary">Manual</span>
+                                                    <span className="badge bg-secondary-subtle text-secondary border border-secondary w-100 p-2">Manual</span>
                                                 )}
                                             </div>
                                         </div>
@@ -450,7 +481,6 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
                                         </table>
                                     </div>
 
-                                    {/* Breakdown in Edit/Create Mode */}
                                     <div className="row justify-content-end mt-3">
                                         <div className="col-md-5">
                                             <div className="d-flex justify-content-between mb-1 small">
@@ -492,13 +522,11 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
                     <div className="modal-dialog modal-md modal-dialog-centered">
                         <div className={`modal-content ${styles.receiptCard} print-section`}>
                             
-                            {/* Close Button - Hidden on Print */}
                             <div className={`modal-header ${styles.receiptHeaderNoBorder} no-print`}>
                                 <button type="button" className="btn-close" onClick={() => setSelectedInvoice(null)}></button>
                             </div>
 
                             <div className={styles.receiptBody}>
-                                {/* Header: Logo & Branding */}
                                 <div className={styles.receiptBrandSection}>
                                     <div className={styles.brandInfo}>
                                         <h2 className={styles.businessName}>My Salon</h2>
@@ -513,7 +541,6 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
 
                                 <hr className={styles.receiptDivider} />
 
-                                {/* Meta Data: Client & Invoice Info */}
                                 <div className={styles.receiptMetaGrid}>
                                     <div className={styles.metaColumn}>
                                         <span className={styles.metaLabel}>BILLED TO</span>
@@ -528,7 +555,6 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
                                     </div>
                                 </div>
 
-                                {/* Items Table */}
                                 <table className={styles.receiptTable}>
                                     <thead>
                                         <tr>
@@ -546,11 +572,10 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
                                     </tbody>
                                 </table>
 
-                                {/* Calculation Summary */}
                                 <div className={styles.receiptSummary}>
                                     <div className={styles.summaryRow}>
                                         <span>Subtotal</span>
-                                        <span>${(selectedInvoice.totalAmount + selectedInvoice.discount).toFixed(2)}</span>
+                                        <span>${(selectedInvoice.totalAmount + (selectedInvoice.discount || 0)).toFixed(2)}</span>
                                     </div>
                                     
                                     {selectedInvoice.discount > 0 && (
@@ -566,14 +591,12 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
                                     </div>
                                 </div>
 
-                                {/* Footer */}
                                 <div className={styles.receiptFooter}>
                                     <p>Thank you for choosing My Salon!</p>
                                     <small>Please keep this receipt for your records.</small>
                                 </div>
                             </div>
 
-                            {/* Print Action - Hidden on Print */}
                             <div className="modal-footer border-0 no-print">
                                 <button className={styles.printBtn} onClick={() => window.print()}>
                                     <FontAwesomeIcon icon={faFileInvoiceDollar} className="me-2" />
@@ -585,20 +608,17 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
                 </div>
             )}
 
-            {/* DELETE MODAL */}
+            {/* DELETE MODAL Placeholder */}
             {deletingInvoiceId && (
                 <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1100 }}>
                     <div className="modal-dialog modal-sm modal-dialog-centered">
                         <div className="modal-content border-0 shadow">
                             <div className="modal-body text-center p-4">
-                                <div className="text-danger mb-3">
-                                    <FontAwesomeIcon icon={faTrashAlt} size="3x" />
-                                </div>
-                                <h5 className="fw-bold">Delete Invoice?</h5>
-                                <p className="small text-muted">This action cannot be undone.</p>
-                                <div className="d-flex gap-2">
-                                    <button className="btn btn-light flex-fill" onClick={() => setDeletingInvoiceId(null)}>Cancel</button>
-                                    <button className="btn btn-danger flex-fill" onClick={handleDeleteInvoice}>Delete</button>
+                                <h5 className="mb-3">Delete Invoice?</h5>
+                                <p className="text-muted small">This action cannot be undone.</p>
+                                <div className="d-flex gap-2 justify-content-center">
+                                    <button className="btn btn-light" onClick={() => setDeletingInvoiceId(null)}>Cancel</button>
+                                    <button className="btn btn-danger" onClick={handleDeleteInvoice}>Delete</button>
                                 </div>
                             </div>
                         </div>
