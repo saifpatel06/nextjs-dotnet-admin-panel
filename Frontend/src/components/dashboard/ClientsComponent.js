@@ -10,26 +10,36 @@ const ClientsComponent = ({ user, initialClients }) => {
   const [editingClient, setEditingClient] = useState(null);
   const [deletingClientId, setDeletingClientId] = useState(null);
 
+  // UPDATED: Matches your new schema
   const [formData, setFormData] = useState({
-    name: '', email: '', company: '', phone: '', status: 'Active',
+    name: '',
+    phone: '',
+    status: 'Active',
+    gender: '',
+    address: '',
+    internalNotes: ''
   });
 
   const filteredClients = clients.filter(c =>
     c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    c.phone?.includes(searchTerm)
   );
 
   const handleOpenAddModal = () => {
     setEditingClient(null);
-    setFormData({ name: '', email: '', company: '', phone: '', status: 'Active' });
+    setFormData({ name: '', phone: '', status: 'Active', gender: '', address: '', internalNotes: '' });
     setShowModal(true);
   };
 
   const handleEditClick = (client) => {
     setEditingClient(client);
     setFormData({ 
-      name: client.name, email: client.email, company: client.company, 
-      phone: client.phone, status: client.status 
+      name: client.name, 
+      phone: client.phone, 
+      status: client.status,
+      gender: client.gender || '',
+      address: client.address || '',
+      internalNotes: client.internalNotes || ''
     });
     setShowModal(true);
   };
@@ -59,7 +69,7 @@ const ClientsComponent = ({ user, initialClients }) => {
         if (editingClient) {
           setClients(clients.map(c => c.id === editingClient.id ? result.data : c));
         } else {
-          setClients([...clients, result.data]);
+          setClients([result.data, ...clients]); // Newest at top
         }
         setShowModal(false);
         notify.success("Client saved successfully!"); 
@@ -69,7 +79,6 @@ const ClientsComponent = ({ user, initialClients }) => {
     } catch (error) {
       notify.dismiss();
       notify.error("Network error. Please try again.");
-      console.error("Save Error:", error);
     }
   };
 
@@ -90,15 +99,13 @@ const ClientsComponent = ({ user, initialClients }) => {
       if (result.success) {
         setClients(clients.filter(c => c.id !== deletingClientId));
         setShowDeleteModal(false);
-        setDeletingClientId(null);
         notify.success("Client deleted successfully.");
       } else {
         notify.error(result.message || "Could not delete client.");
       }
     } catch (error) {
       notify.dismiss();
-      notify.error("Network error occurred during deletion.");
-      console.error("Delete Error:", error);
+      notify.error("Network error occurred.");
     }
   };
 
@@ -107,7 +114,7 @@ const ClientsComponent = ({ user, initialClients }) => {
       <div className={styles.actionBar}>
         <input 
           type="text" 
-          placeholder="Search clients..." 
+          placeholder="Search by name or phone..." 
           className="form-control w-50 shadow-sm" 
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)} 
@@ -124,8 +131,8 @@ const ClientsComponent = ({ user, initialClients }) => {
               <thead className="table-light">
                 <tr>
                   <th className="ps-4">Name</th>
-                  <th>Email</th>
-                  <th>Company</th>
+                  <th>Phone</th>
+                  <th>Gender</th>
                   <th>Status</th>
                   <th className="text-end pe-4">Actions</th>
                 </tr>
@@ -133,9 +140,12 @@ const ClientsComponent = ({ user, initialClients }) => {
               <tbody>
                 {filteredClients.map((client) => (
                   <tr key={client.id}>
-                    <td className="ps-4 fw-bold">{client.name}</td>
-                    <td>{client.email}</td>
-                    <td>{client.company}</td>
+                    <td className="ps-4">
+                        <div className="fw-bold">{client.name}</div>
+                        <small className="text-muted">{client.address || 'No address'}</small>
+                    </td>
+                    <td>{client.phone}</td>
+                    <td>{client.gender || '-'}</td>
                     <td>
                       <span className={`badge rounded-pill ${client.status === 'Active' ? 'bg-success' : 'bg-secondary'}`}>
                         {client.status}
@@ -153,10 +163,10 @@ const ClientsComponent = ({ user, initialClients }) => {
         </div>
       </div>
 
-      {/* --- MODALS STAY HERE --- */}
+      {/* --- FORM MODAL --- */}
       {showModal && (
         <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog modal-dialog-centered">
+          <div className="modal-dialog modal-dialog-centered modal-lg">
             <div className="modal-content border-0 shadow-lg">
               <form onSubmit={handleSubmit}>
                 <div className="modal-header border-bottom-0">
@@ -164,14 +174,49 @@ const ClientsComponent = ({ user, initialClients }) => {
                   <button type="button" className="btn-close" onClick={() => setShowModal(false)}></button>
                 </div>
                 <div className="modal-body px-4">
-                  <div className="mb-3"><label className="form-label small text-muted">Name</label><input type="text" className="form-control" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} required /></div>
-                  <div className="mb-3"><label className="form-label small text-muted">Email</label><input type="email" className="form-control" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} required /></div>
-                  <div className="mb-3"><label className="form-label small text-muted">Company</label><input type="text" className="form-control" value={formData.company} onChange={(e) => setFormData({...formData, company: e.target.value})} /></div>
-                  <div className="mb-3"><label className="form-label small text-muted">Phone</label><input type="text" className="form-control" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} /></div>
+                  <div className="row">
+                    <div className="col-md-6 mb-3">
+                        <label className="form-label small text-muted">Full Name *</label>
+                        <input type="text" className="form-control" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} required />
+                    </div>
+                    <div className="col-md-6 mb-3">
+                        <label className="form-label small text-muted">Phone Number *</label>
+                        <input type="text" className="form-control" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} required />
+                    </div>
+                  </div>
+                  
+                  <div className="row">
+                    <div className="col-md-6 mb-3">
+                        <label className="form-label small text-muted">Gender</label>
+                        <select className="form-select" value={formData.gender} onChange={(e) => setFormData({...formData, gender: e.target.value})}>
+                            <option value="">Select Gender</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div className="col-md-6 mb-3">
+                        <label className="form-label small text-muted">Status</label>
+                        <select className="form-select" value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})}>
+                            <option value="Active">Active</option>
+                            <option value="Inactive">Inactive</option>
+                        </select>
+                    </div>
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label small text-muted">Address (Optional)</label>
+                    <input type="text" className="form-control" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label small text-muted">Internal Notes (Private)</label>
+                    <textarea className="form-control" rows="3" value={formData.internalNotes} onChange={(e) => setFormData({...formData, internalNotes: e.target.value})} placeholder="E.g. Customer prefers morning slots..."></textarea>
+                  </div>
                 </div>
                 <div className="modal-footer border-top-0">
                   <button type="button" className="btn btn-light px-4" onClick={() => setShowModal(false)}>Cancel</button>
-                  <button type="submit" className="btn btn-primary px-4">{editingClient ? 'Update Client' : 'Create Client'}</button>
+                  <button type="submit" className="btn btn-primary px-4">{editingClient ? 'Save Changes' : 'Create Client'}</button>
                 </div>
               </form>
             </div>
@@ -179,6 +224,7 @@ const ClientsComponent = ({ user, initialClients }) => {
         </div>
       )}
 
+      {/* --- DELETE MODAL --- */}
       {showDeleteModal && (
         <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog modal-dialog-centered modal-sm">

@@ -36,3 +36,219 @@
     padding-top: 15px;
     margin-top: 15px;
 }
+
+.receiptCard {
+    border-radius: 15px;
+    overflow: hidden;
+    height: auto; 
+    background-color: white !important;
+}
+
+.receiptHeaderNoBorder {
+    border: none;
+    padding: 1rem 1.5rem 0;
+}
+
+.receiptBody {
+    padding: 0 2.5rem 2rem;
+}
+
+/* Branding */
+.receiptBrandSection {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+}
+
+.businessName {
+    font-weight: 800;
+    letter-spacing: -1px;
+    color: #1a1a1a;
+    margin: 0;
+}
+
+.businessAddress {
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin: 0;
+}
+
+/* Badges */
+.paidBadge {
+    background: #d1e7dd;
+    color: #0f5132;
+    padding: 5px 12px;
+    border-radius: 50px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.pendingBadge {
+    background: #fff3cd;
+    color: #664d03;
+    padding: 5px 12px;
+    border-radius: 50px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+/* Grid Info */
+.receiptMetaGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin: 1.5rem 0;
+}
+
+.metaLabel {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #adb5bd;
+    margin-bottom: 4px;
+}
+
+.metaValueBold {
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.metaValue {
+    font-size: 0.9rem;
+    color: #495057;
+}
+
+/* Table */
+.receiptTable {
+    width: 100%;
+    margin-bottom: 1.5rem;
+}
+
+.receiptTable th {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: #6c757d;
+    border-top: 1px solid #eee;
+    border-bottom: 1px solid #eee;
+    padding: 10px 0;
+}
+
+.receiptTable td {
+    padding: 12px 0;
+    font-size: 0.95rem;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+/* Summary */
+.receiptSummary {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 10px;
+}
+
+.summaryRow {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+}
+
+.discountText {
+    color: #dc3545;
+    font-weight: 600;
+}
+
+.totalRow {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 2px dashed #dee2e6;
+    font-weight: 800;
+    font-size: 1.25rem;
+    color: #0d6efd;
+}
+
+/* Footer */
+.receiptFooter {
+    text-align: center;
+    margin-top: 2rem;
+}
+
+.receiptFooter p {
+    font-weight: 600;
+    margin-bottom: 0;
+}
+
+.receiptFooter small {
+    color: #adb5bd;
+}
+
+.printBtn {
+    width: 100%;
+    background: #212529;
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: 0.3s;
+}
+
+.printBtn:hover {
+    background: #000;
+}
+
+.receiptDivider {
+    opacity: 0.1;
+    margin: 1rem 0;
+}
+
+@media print {
+    :global(html), :global(body) {
+        height: 100vh !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    /* Hide everything in the body */
+    :global(body) * {
+        visibility: hidden !important;
+    }
+
+    /* Show only the print section - using the local module class */
+    .receiptCard, .receiptCard * {
+        visibility: visible !important;
+    }
+
+    /* Position the receipt for the paper */
+    .receiptCard {
+        position: fixed !important;
+        left: 50% !important;
+        top: 0 !important;
+        transform: translateX(-50%) !important;
+        width: 100% !important;
+        max-width: 800px !important;
+        margin: 0 !important;
+        padding: 20px !important;
+        border: none !important;
+        box-shadow: none !important;
+        background: white !important;
+    }
+
+    /* Hide UI elements like buttons/close icons */
+    :global(.no-print) {
+        display: none !important;
+    }
+
+    @page {
+        margin: 0;
+        size: auto;
+    }
+}

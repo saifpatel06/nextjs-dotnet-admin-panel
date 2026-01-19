@@ -14,10 +14,12 @@ namespace AdminPanelAPI.DTOs
         public int Id { get; set; }
         public int ClientId { get; set; }
         public string? ClientName { get; set; }
+        public string? ClientPhone { get; set; } 
         public int BarberId { get; set; }
         public string? BarberName { get; set; }
         public int ServiceId { get; set; }
         public string? ServiceName { get; set; }
+        public int DurationInMinutes { get; set; }
         public DateTime AppointmentDate { get; set; }
         public DateTime EndTime { get; set; }
         public string Status { get; set; } = "Pending";

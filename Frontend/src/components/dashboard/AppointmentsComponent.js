@@ -2,8 +2,13 @@ import { useState, useEffect } from 'react';
 import styles from '../../../styles/Barbers.module.css'; 
 import CalendarView from './CalendarView';
 import { notify } from '../../../utils/notify';
+import InvoiceModal from './InvoiceModal'; // Now active
 
 const AppointmentsComponent = ({ user, initialAppointments }) => {
+  const getLocalDateString = (date = new Date()) => {
+    return date.toLocaleDateString('en-CA'); 
+  };
+
   const [appointments, setAppointments] = useState(initialAppointments || []);
   const [barbers, setBarbers] = useState([]);
   const [services, setServices] = useState([]);
@@ -12,8 +17,7 @@ const AppointmentsComponent = ({ user, initialAppointments }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [idToDelete, setIdToDelete] = useState(null);
   
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-
+  const [selectedDate, setSelectedDate] = useState(getLocalDateString());
   const [mounted, setMounted] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -22,8 +26,12 @@ const AppointmentsComponent = ({ user, initialAppointments }) => {
   const [availableSlots, setAvailableSlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
 
+  // --- Checkout States ---
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [activeInvoiceData, setActiveInvoiceData] = useState(null);
+
   const [formData, setFormData] = useState({
-    id: null, clientId: '', barberId: '', serviceId: '', date: '', time: '', notes: '', status: 'Pending'
+    id: null, clientId: '', barberId: '', serviceId: '', date: getLocalDateString(), time: '', notes: '', status: 'Pending'
   });
 
   useEffect(() => { 
@@ -31,7 +39,6 @@ const AppointmentsComponent = ({ user, initialAppointments }) => {
     fetchReferenceData(); 
   }, []);
 
-  // Fetch appointments when the selected date changes
   useEffect(() => {
     refreshAppointments();
   }, [selectedDate]);
@@ -39,6 +46,8 @@ const AppointmentsComponent = ({ user, initialAppointments }) => {
   useEffect(() => {
     if (formData.barberId && formData.serviceId && formData.date) {
       fetchAvailableSlots();
+    } else {
+      setAvailableSlots([]);
     }
   }, [formData.barberId, formData.serviceId, formData.date]);
 
@@ -50,8 +59,12 @@ const AppointmentsComponent = ({ user, initialAppointments }) => {
         fetch('http://localhost:5085/api/Services', { headers }),
         fetch('http://localhost:5085/api/Clients', { headers })
       ]);
-      const b = await bRes.json(); const s = await sRes.json(); const c = await cRes.json();
-      setBarbers(b.data || []); setServices(s.data || []); setClients(c.data || []);
+      const b = await bRes.json(); 
+      const s = await sRes.json(); 
+      const c = await cRes.json();
+      setBarbers(b.data || []); 
+      setServices(s.data || []); 
+      setClients(c.data || []);
     } catch (err) { 
       notify.error("Failed to load reference data");
     }
@@ -65,7 +78,6 @@ const AppointmentsComponent = ({ user, initialAppointments }) => {
         { headers: { 'Authorization': `Bearer ${user.token}` } }
       );
       const result = await res.json();
-      
       if (result.success) {
         let slots = result.data || [];
         if (isEditing && formData.time) {
@@ -95,9 +107,17 @@ const AppointmentsComponent = ({ user, initialAppointments }) => {
   const handleEdit = (app) => {
     const d = new Date(app.appointmentDate);
     setFormData({
-      id: app.id, clientId: app.clientId, barberId: app.barberId, serviceId: app.serviceId,
-      date: d.toISOString().split('T')[0], time: d.toTimeString().substring(0, 5),
-      notes: app.notes || '', status: app.status || 'Pending'
+      id: app.id, 
+      clientId: app.clientId, 
+      clientName: app.clientName,
+      barberId: app.barberId, 
+      serviceId: app.serviceId,
+      serviceName: app.serviceName,
+      finalPrice: app.finalPrice,
+      date: app.appointmentDate.split('T')[0], 
+      time: d.toTimeString().substring(0, 5),
+      notes: app.notes || '', 
+      status: app.status || 'Pending'
     });
     setIsEditing(true);
     setShowModal(true);
@@ -108,16 +128,68 @@ const AppointmentsComponent = ({ user, initialAppointments }) => {
     setShowDeleteConfirm(true);
   };
 
+  // --- Handle Checkout Logic ---
+  const handleProceedToCheckout = () => {
+    const selectedService = services.find(s => s.id == formData.serviceId);
+    const selectedClient = clients.find(c => c.id == formData.clientId);
+
+    setActiveInvoiceData({
+        appointmentId: formData.id,
+        clientId: formData.clientId,
+        clientName: selectedClient?.name || formData.clientName,
+        serviceId: formData.serviceId,
+        serviceName: selectedService?.name || formData.serviceName,
+        amount: selectedService?.price || formData.finalPrice || 0
+    });
+    setShowModal(false);
+    setShowInvoiceModal(true);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.time) return notify.error("Select time!");
+    
+    notify.loading("Saving...");
+    const method = isEditing ? 'PUT' : 'POST';
+    const url = isEditing ? `http://localhost:5085/api/Appointments/${formData.id}` : 'http://localhost:5085/api/Appointments';
+    
+    try {
+      const res = await fetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user.token}` },
+        body: JSON.stringify({
+          ...formData,
+          clientId: parseInt(formData.clientId),
+          barberId: parseInt(formData.barberId),
+          serviceId: parseInt(formData.serviceId),
+          appointmentDate: `${formData.date}T${formData.time}:00`
+        })
+      });
+
+      const result = await res.json();
+      notify.dismiss();
+
+      if (res.ok) { 
+        setShowModal(false); 
+        refreshAppointments(); 
+        notify.success("Booking Saved!");
+      } else {
+        notify.error(result.message || "Could not save appointment");
+      }
+    } catch (error) {
+      notify.dismiss();
+      notify.error("Error saving");
+    }
+  };
+
   const confirmDelete = async () => {
     if (!idToDelete) return;
-    
     notify.loading("Deleting...");
     try {
       const res = await fetch(`http://localhost:5085/api/Appointments/${idToDelete}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${user.token}` }
       });
-      
       notify.dismiss();
       if (res.ok) { 
         setShowDeleteConfirm(false);
@@ -132,36 +204,6 @@ const AppointmentsComponent = ({ user, initialAppointments }) => {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!formData.time) return notify.error("Select time!");
-    notify.loading("Saving...");
-    const method = isEditing ? 'PUT' : 'POST';
-    const url = isEditing ? `http://localhost:5085/api/Appointments/${formData.id}` : 'http://localhost:5085/api/Appointments';
-    try {
-      const res = await fetch(url, {
-        method: method,
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user.token}` },
-        body: JSON.stringify({
-          ...formData,
-          clientId: parseInt(formData.clientId),
-          barberId: parseInt(formData.barberId),
-          serviceId: parseInt(formData.serviceId),
-          appointmentDate: `${formData.date}T${formData.time}:00`
-        })
-      });
-      notify.dismiss();
-      if (res.ok) { 
-        setShowModal(false); 
-        refreshAppointments(); 
-        notify.success("Saved!");
-      }
-    } catch (error) {
-      notify.dismiss();
-      notify.error("Error saving");
-    }
-  };
-
   if (!mounted) return null;
 
   return (
@@ -171,7 +213,7 @@ const AppointmentsComponent = ({ user, initialAppointments }) => {
           <input 
             type="text" 
             className="form-control border-0 bg-light" 
-            placeholder="🔍 Search appointments..." 
+            placeholder="🔍 Search by name or phone..." 
             value={searchTerm} 
             onChange={e => setSearchTerm(e.target.value)} 
           />
@@ -193,10 +235,11 @@ const AppointmentsComponent = ({ user, initialAppointments }) => {
         selectedDate={selectedDate}
         onDateChange={setSelectedDate}
         appointments={appointments.filter(a => {
-          // Filter by Date AND Search Term
           const isSameDate = a.appointmentDate.split('T')[0] === selectedDate;
-          const matchesSearch = a.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                                a.barberName?.toLowerCase().includes(searchTerm.toLowerCase());
+          const matchesSearch = 
+            a.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+            a.clientPhone?.includes(searchTerm) ||
+            a.barberName?.toLowerCase().includes(searchTerm.toLowerCase());
           return isSameDate && matchesSearch;
         })} 
         onEdit={handleEdit} 
@@ -204,7 +247,6 @@ const AppointmentsComponent = ({ user, initialAppointments }) => {
 
       {showModal && (
         <div className="modal show d-block" style={{backgroundColor:'rgba(0,0,0,0.6)', zIndex: 1070}}>
-            {/* ... modal content ... */}
             <div className="modal-dialog modal-dialog-centered">
                 <div className="modal-content border-0 shadow-lg">
                     <div className="modal-header bg-dark text-white border-0">
@@ -217,7 +259,7 @@ const AppointmentsComponent = ({ user, initialAppointments }) => {
                                 <label className="small fw-bold text-muted">CLIENT</label>
                                 <select className="form-select" required value={formData.clientId} onChange={e => setFormData({...formData, clientId: e.target.value})}>
                                     <option value="">Select Client</option>
-                                    {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    {clients.map(c => <option key={c.id} value={c.id}>{c.name} ({c.phone})</option>)}
                                 </select>
                             </div>
                             <div className="row mb-3">
@@ -266,11 +308,21 @@ const AppointmentsComponent = ({ user, initialAppointments }) => {
                                 </select>
                             </div>
                         </div>
+
                         <div className="modal-footer bg-light border-0 d-flex justify-content-between">
-                            {isEditing ? <button type="button" className="btn btn-outline-danger" onClick={() => triggerDelete(formData.id)}>Delete</button> : <div></div>}
+                            <div className="d-flex gap-2">
+                                {isEditing && (
+                                    <button type="button" className="btn btn-outline-danger" onClick={() => triggerDelete(formData.id)}>Delete</button>
+                                )}
+                                {isEditing && formData.status === 'Completed' && (
+                                    <button type="button" className="btn btn-success fw-bold px-3" onClick={handleProceedToCheckout}>
+                                        Checkout 💳
+                                    </button>
+                                )}
+                            </div>
                             <div className="d-flex gap-2">
                                 <button type="button" className="btn btn-light" onClick={() => setShowModal(false)}>Cancel</button>
-                                <button type="submit" className="btn btn-primary px-4 shadow-sm">Save Booking</button>
+                                <button type="submit" className="btn btn-primary px-4 shadow-sm">Save Changes</button>
                             </div>
                         </div>
                     </form>
@@ -279,37 +331,30 @@ const AppointmentsComponent = ({ user, initialAppointments }) => {
         </div>
       )}
 
+      {/* Delete Confirmation */}
       {showDeleteConfirm && (
         <div className="modal show d-block" style={{backgroundColor:'rgba(0,0,0,0.7)', zIndex: 1080}}>
           <div className="modal-dialog modal-sm modal-dialog-centered">
-            <div className="modal-content border-0 shadow-lg">
-              <div className="modal-body p-4 text-center">
-                <div className="text-danger mb-3">
-                  <i className="bi bi-exclamation-triangle-fill" style={{fontSize: '3rem'}}></i>
+            <div className="modal-content border-0 shadow-lg p-3 text-center">
+                <h5 className="fw-bold">Delete?</h5>
+                <p className="small text-muted">Permanently remove this booking?</p>
+                <div className="d-flex gap-2">
+                    <button className="btn btn-light w-100" onClick={() => setShowDeleteConfirm(false)}>No</button>
+                    <button className="btn btn-danger w-100" onClick={confirmDelete}>Yes</button>
                 </div>
-                <h5 className="fw-bold">Are you sure?</h5>
-                <p className="text-muted small">This action cannot be undone. This appointment will be permanently removed.</p>
-                
-                <div className="d-flex gap-2 mt-4">
-                  <button 
-                    type="button" 
-                    className="btn btn-light w-100" 
-                    onClick={() => setShowDeleteConfirm(false)}
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="button" 
-                    className="btn btn-danger w-100" 
-                    onClick={confirmDelete}
-                  >
-                    Yes, Delete
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Invoice Modal Rendering */}
+      {showInvoiceModal && activeInvoiceData && (
+        <InvoiceModal 
+          user={user} 
+          data={activeInvoiceData} 
+          onClose={() => setShowInvoiceModal(false)} 
+          onRefresh={refreshAppointments}
+        />
       )}
     </div>
   );

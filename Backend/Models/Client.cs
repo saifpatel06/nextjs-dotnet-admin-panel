@@ -8,25 +8,27 @@ namespace AdminPanelAPI.Models
         [Key]
         public int Id { get; set; }
 
-        [Required(ErrorMessage = "Client name is required")]
-        [StringLength(100, MinimumLength = 2)]
+        [Required(ErrorMessage = "Name is required")]
+        [StringLength(100)]
         public string Name { get; set; } = string.Empty;
 
-        [Required]
-        [EmailAddress(ErrorMessage = "Invalid email format")]
-        public string Email { get; set; } = string.Empty;
-
-        [StringLength(150)]
-        public string Company { get; set; } = string.Empty;
-
-        [Phone]
-        [StringLength(10)]
+        [Required(ErrorMessage = "Phone is required")]
+        [StringLength(20)]
         public string Phone { get; set; } = string.Empty;
 
-        [Required]
-        public string Status { get; set; } = "Active";
+        public string? Gender { get; set; }
+
+        [StringLength(250)]
+        public string? Address { get; set; }
+
+        public string? InternalNotes { get; set; }
 
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        public DateTime? UpdatedAt { get; set; }
+        
+        [Required]
+        public string Status { get; set; } = "Active";
     }
 }

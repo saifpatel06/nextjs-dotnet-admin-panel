@@ -3,6 +3,7 @@ using System;
 using AdminPanelAPI.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AdminPanelAPI.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260119082342_RevampClientModule")]
+    partial class RevampClientModule
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.1");
@@ -236,9 +239,6 @@ namespace AdminPanelAPI.Migrations
                     b.Property<int>("ClientId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<decimal>("Discount")
-                        .HasColumnType("TEXT");
-
                     b.Property<DateTime>("DueDate")
                         .HasColumnType("TEXT");
 
@@ -249,10 +249,6 @@ namespace AdminPanelAPI.Migrations
                     b.Property<DateTime>("IssueDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("PaymentMethod")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -261,8 +257,6 @@ namespace AdminPanelAPI.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("AppointmentId");
 
                     b.HasIndex("ClientId");
 
@@ -370,17 +364,11 @@ namespace AdminPanelAPI.Migrations
 
             modelBuilder.Entity("AdminPanelAPI.Models.Invoice", b =>
                 {
-                    b.HasOne("AdminPanelAPI.Models.Appointment", "Appointment")
-                        .WithMany()
-                        .HasForeignKey("AppointmentId");
-
                     b.HasOne("AdminPanelAPI.Models.Client", "Client")
                         .WithMany()
                         .HasForeignKey("ClientId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Appointment");
 
                     b.Navigation("Client");
                 });

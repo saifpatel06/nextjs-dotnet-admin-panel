@@ -17,7 +17,7 @@ namespace AdminPanelAPI.Controllers
             _context = context;
         }
 
-        [HttpGet]
+       [HttpGet]
         public async Task<IActionResult> GetAppointments()
         {
             var appointments = await _context.Appointments
@@ -27,15 +27,17 @@ namespace AdminPanelAPI.Controllers
                 .OrderByDescending(a => a.AppointmentDate)
                 .ToListAsync();
 
-            var appointmentDtos = appointments.Select(a => new AppointmentDto // <--- This name must match the class
+            var appointmentDtos = appointments.Select(a => new AppointmentDto
             {
                 Id = a.Id,
                 ClientId = a.ClientId,
                 ClientName = a.Client?.Name,
+                ClientPhone = a.Client?.Phone,
                 BarberId = a.BarberId,
                 BarberName = a.Barber?.Name,
                 ServiceId = a.ServiceId,
                 ServiceName = a.Service?.Name,
+                DurationInMinutes = a.Service?.DurationInMinutes ?? 30, // Passed to Frontend
                 AppointmentDate = a.AppointmentDate,
                 EndTime = a.EndTime,
                 Status = a.Status,
@@ -43,11 +45,7 @@ namespace AdminPanelAPI.Controllers
                 Notes = a.Notes
             }).ToList();
 
-            return Ok(new ApiResponse<List<AppointmentDto>> 
-            { 
-                Success = true, 
-                Data = appointmentDtos 
-            });
+            return Ok(new ApiResponse<List<AppointmentDto>> { Success = true, Data = appointmentDtos });
         }
 
         [HttpGet("available-slots")]
@@ -129,42 +127,37 @@ namespace AdminPanelAPI.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> PutAppointment(int id, [FromBody] AppointmentUpdateDto updateDto)
         {
-            if (id != updateDto.Id)
-            {
-                return BadRequest(new { success = false, message = "ID mismatch" });
-            }
+            if (id != updateDto.Id) return BadRequest(new { success = false, message = "ID mismatch" });
 
             var appointment = await _context.Appointments.FindAsync(id);
-            if (appointment == null)
-            {
-                return NotFound(new { success = false, message = "Appointment not found" });
-            }
+            if (appointment == null) return NotFound(new { success = false, message = "Appointment not found" });
 
             var service = await _context.Services.FindAsync(updateDto.ServiceId);
-            if (service == null)
-            {
-                return BadRequest(new { success = false, message = "Invalid Service selected" });
-            }
+            if (service == null) return BadRequest(new { success = false, message = "Invalid Service" });
+
+            var endTime = updateDto.AppointmentDate.AddMinutes(service.DurationInMinutes);
+
+            bool conflict = await _context.Appointments.AnyAsync(a => 
+                a.Id != id && 
+                a.BarberId == updateDto.BarberId && 
+                a.AppointmentDate.Date == updateDto.AppointmentDate.Date && 
+                a.Status != "Cancelled" &&
+                ((updateDto.AppointmentDate >= a.AppointmentDate && updateDto.AppointmentDate < a.EndTime) || 
+                (endTime > a.AppointmentDate && endTime <= a.EndTime)));
+
+            if (conflict) return BadRequest(new { success = false, message = "The new time slot is already occupied." });
 
             appointment.ClientId = updateDto.ClientId;
             appointment.BarberId = updateDto.BarberId;
             appointment.ServiceId = updateDto.ServiceId;
             appointment.AppointmentDate = updateDto.AppointmentDate;
+            appointment.EndTime = endTime;
             appointment.Status = updateDto.Status;
             appointment.Notes = updateDto.Notes;
-
-            appointment.EndTime = updateDto.AppointmentDate.AddMinutes(service.DurationInMinutes);
             appointment.FinalPrice = service.Price;
 
-            try
-            {
-                await _context.SaveChangesAsync();
-                return Ok(new { success = true, message = "Appointment updated successfully" });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { success = false, message = "Database error: " + ex.Message });
-            }
+            await _context.SaveChangesAsync();
+            return Ok(new { success = true, message = "Appointment updated successfully" });
         }
 
         // DELETE: api/Appointments/5

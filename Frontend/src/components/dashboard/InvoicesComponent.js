@@ -2,7 +2,10 @@ import { useState, useEffect } from 'react';
 import styles from '../../../styles/Invoices.module.css';
 import { notify } from '../../../utils/notify';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEye, faTrashAlt, faPlus, faCalendarCheck, faFileInvoiceDollar, faUserTag } from '@fortawesome/free-solid-svg-icons';
+import { 
+    faEye, faEdit, faTrashAlt, faPlus, faCalendarCheck, 
+    faFileInvoiceDollar, faUserTag, faCreditCard, faMoneyBillWave 
+} from '@fortawesome/free-solid-svg-icons';
 
 const InvoicesComponent = ({ user, initialInvoices }) => {
     const [invoices, setInvoices] = useState(initialInvoices || []);
@@ -14,11 +17,14 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
 
     const [showAddModal, setShowAddModal] = useState(false);
     const [selectedInvoice, setSelectedInvoice] = useState(null);
+    const [editingInvoiceId, setEditingInvoiceId] = useState(null);
     const [deletingInvoiceId, setDeletingInvoiceId] = useState(null);
 
     const [newInvoice, setNewInvoice] = useState({
         clientId: '',
         appointmentId: '',
+        paymentMethod: 'Cash', 
+        discount: 0,
         items: [{ description: '', quantity: 1, unitPrice: 0 }]
     });
 
@@ -32,7 +38,6 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
                 fetchAppointments()
             ]);
 
-            // URL PARAMETER LOGIC: Handle direct links from Appointments Page
             const urlParams = new URLSearchParams(window.location.search);
             const apptId = urlParams.get('appointmentId');
             const cId = urlParams.get('clientId');
@@ -43,21 +48,14 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
                     clientId: cId || '',
                     appointmentId: apptId || ''
                 }));
-                if (apptId) {
-                    // We need to wait for appointments to load to auto-fill items
-                    // This logic is handled by a secondary check or by ensuring fetchAppointments is done
-                    setShowAddModal(true);
-                }
+                if (apptId) setShowAddModal(true);
             }
             setLoading(false);
         };
-
         loadInitialData();
     }, []);
 
-    // --- AUTO-FILL LOGIC ---
     const handleClientChange = (selectedClientId) => {
-        // Update client ID and reset items/appt link
         setNewInvoice(prev => ({
             ...prev,
             clientId: selectedClientId,
@@ -67,10 +65,9 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
 
         if (!selectedClientId) return;
 
-        // Find if this client has an appointment (filtering for confirmed/pending)
         const clientAppt = appointments.find(a => 
             a.clientId.toString() === selectedClientId.toString() &&
-            (a.status !== 'Cancelled' && a.status !== 'Completed')
+            (a.status !== 'Cancelled')
         );
 
         if (clientAppt) {
@@ -87,7 +84,6 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
         }
     };
 
-    // --- API FETCHERS ---
     const fetchInvoices = async () => {
         try {
             const res = await fetch('http://localhost:5085/api/Invoices', {
@@ -128,7 +124,6 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
         } catch (error) { console.error("Error fetching appointments", error); }
     };
 
-    // --- ITEM MANAGEMENT ---
     const handleAddItem = () => {
         setNewInvoice({
             ...newInvoice,
@@ -155,11 +150,16 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
         setNewInvoice({ ...newInvoice, items: updatedItems });
     };
 
-    const calculateTotal = () => {
+    const calculateSubtotal = () => {
         return newInvoice.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
     };
 
-    // --- CREATE INVOICE ---
+    const calculateTotal = () => {
+        const subtotal = calculateSubtotal();
+        const discount = parseFloat(newInvoice.discount) || 0;
+        return Math.max(0, subtotal - discount); 
+    };
+
     const handleCreateInvoice = async (e) => {
         e.preventDefault();
         if (!newInvoice.clientId) return notify.error("Please select a client");
@@ -167,6 +167,8 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
         const payload = {
             clientId: parseInt(newInvoice.clientId),
             appointmentId: newInvoice.appointmentId ? parseInt(newInvoice.appointmentId) : null,
+            paymentMethod: newInvoice.paymentMethod,
+            discount: parseFloat(newInvoice.discount) || 0, 
             items: newInvoice.items.map(item => ({
                 description: item.description,
                 quantity: parseInt(item.quantity),
@@ -174,10 +176,16 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
             }))
         };
 
-        notify.loading("Generating invoice...");
+        const isEditing = !!editingInvoiceId;
+        const url = isEditing 
+            ? `http://localhost:5085/api/Invoices/${editingInvoiceId}` 
+            : 'http://localhost:5085/api/Invoices';
+
+        notify.loading(isEditing ? "Updating Invoice..." : "Finalizing Checkout...");
+
         try {
-            const res = await fetch('http://localhost:5085/api/Invoices', {
-                method: 'POST',
+            const res = await fetch(url, {
+                method: isEditing ? 'PUT' : 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${user.token}` 
@@ -187,16 +195,35 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
 
             const result = await res.json();
             notify.dismiss();
+
             if (result.success) {
-                notify.success("Invoice created successfully!");
+                notify.success(isEditing ? "Invoice Updated!" : "Checkout Successful!");
                 setShowAddModal(false);
-                setNewInvoice({ clientId: '', appointmentId: '', items: [{ description: '', quantity: 1, unitPrice: 0 }] });
+                setEditingInvoiceId(null);
+                setNewInvoice({ clientId: '', appointmentId: '', paymentMethod: 'Cash', discount: 0, items: [{ description: '', quantity: 1, unitPrice: 0 }] });
                 fetchInvoices();
+                fetchAppointments(); 
             }
         } catch (error) {
             notify.dismiss();
             notify.error("Connection error");
         }
+    };
+
+    const handleEditClick = (inv) => {
+        setEditingInvoiceId(inv.id);
+        setNewInvoice({
+            clientId: inv.clientId.toString(),
+            appointmentId: inv.appointmentId ? inv.appointmentId.toString() : '',
+            paymentMethod: inv.paymentMethod,
+            discount: inv.discount || 0,
+            items: inv.items.map(i => ({ 
+                description: i.description, 
+                quantity: i.quantity, 
+                unitPrice: i.unitPrice 
+            }))
+        });
+        setShowAddModal(true);
     };
 
     const handleUpdateStatus = async (id, currentStatus) => {
@@ -213,7 +240,7 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
             });
             if (res.ok) {
                 notify.dismiss();
-                notify.success(`Status: ${nextStatus}`);
+                notify.success(`Status updated to ${nextStatus}`);
                 fetchInvoices();
             }
         } catch (error) {
@@ -251,16 +278,20 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
     return (
         <div className={styles.content}>
             <div className={styles.actionBar}>
-                <h3 className="fw-bold">Invoices</h3>
+                <h3 className="fw-bold">Billing & Invoices</h3>
                 <div className="d-flex gap-2 w-50">
                     <input 
                         type="text" 
                         className="form-control shadow-sm" 
-                        placeholder="Search invoices..." 
+                        placeholder="Search by invoice # or client..." 
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
-                    <button className="btn btn-primary text-nowrap" onClick={() => setShowAddModal(true)}>
+                    <button className="btn btn-primary text-nowrap" onClick={() => {
+                        setEditingInvoiceId(null);
+                        setNewInvoice({ clientId: '', appointmentId: '', paymentMethod: 'Cash', discount: 0, items: [{ description: '', quantity: 1, unitPrice: 0 }] });
+                        setShowAddModal(true);
+                    }}>
                         <FontAwesomeIcon icon={faPlus} className="me-2" /> New Invoice
                     </button>
                 </div>
@@ -274,7 +305,7 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
                                 <tr>
                                     <th className="ps-4">Invoice #</th>
                                     <th>Client</th>
-                                    <th>Date</th>
+                                    <th>Method</th>
                                     <th>Total</th>
                                     <th>Status</th>
                                     <th className="text-end pe-4">Actions</th>
@@ -288,32 +319,28 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
                                         <td className="ps-4 fw-bold text-primary">{inv.invoiceNumber}</td>
                                         <td>
                                             <div className="fw-bold">{inv.client?.name}</div>
-                                            <div className="small text-muted">{inv.client?.email}</div>
+                                            <div className="small text-muted">{new Date(inv.issueDate).toLocaleDateString()}</div>
                                         </td>
-                                        <td>{new Date(inv.issueDate).toLocaleDateString()}</td>
-                                        <td className="fw-bold">${inv.totalAmount.toFixed(2)}</td>
                                         <td>
+                                            <span className="badge bg-light text-dark border">
+                                                {inv.paymentMethod === 'Card' ? <FontAwesomeIcon icon={faCreditCard} className="me-1"/> : <FontAwesomeIcon icon={faMoneyBillWave} className="me-1"/>}
+                                                {inv.paymentMethod}
+                                            </span>
+                                        </td>
+                                        <td className="fw-bold">${inv.totalAmount.toFixed(2)}</td>
+                                        <td style={{ cursor: 'pointer' }} onClick={() => handleUpdateStatus(inv.id, inv.status)}>
                                             <span className={inv.status === 'Paid' ? styles.statusPaid : styles.statusPending}>
                                                 {inv.status}
                                             </span>
                                         </td>
                                         <td className="text-end pe-4">
-                                            <button 
-                                                className={`btn btn-sm me-2 ${inv.status === 'Pending' ? 'btn-success' : 'btn-outline-secondary'}`}
-                                                onClick={() => handleUpdateStatus(inv.id, inv.status)}
-                                            >
-                                                {inv.status === 'Pending' ? 'Mark Paid' : 'Set Pending'}
+                                            <button className="btn btn-sm btn-outline-warning me-2" onClick={() => handleEditClick(inv)}>
+                                                <FontAwesomeIcon icon={faEdit} /> 
                                             </button>
-                                            <button 
-                                                className="btn btn-sm btn-outline-primary me-2"
-                                                onClick={() => setSelectedInvoice(inv)}
-                                            >
+                                            <button className="btn btn-sm btn-outline-primary me-2" onClick={() => setSelectedInvoice(inv)}>
                                                 <FontAwesomeIcon icon={faEye} />
                                             </button>
-                                            <button 
-                                                className="btn btn-sm btn-outline-danger"
-                                                onClick={() => setDeletingInvoiceId(inv.id)}
-                                            >
+                                            <button className="btn btn-sm btn-outline-danger" onClick={() => setDeletingInvoiceId(inv.id)}>
                                                 <FontAwesomeIcon icon={faTrashAlt} />
                                             </button>
                                         </td>
@@ -325,19 +352,19 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
                 </div>
             </div>
 
-            {/* CREATE INVOICE MODAL */}
+            {/* CREATE / EDIT INVOICE MODAL */}
             {showAddModal && (
                 <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>
                     <div className="modal-dialog modal-lg modal-dialog-centered">
-                        <div className="modal-content border-0 shadow-lg">
+                        <div className={`modal-content ${styles.receiptCard} print-section`}>
                             <form onSubmit={handleCreateInvoice}>
                                 <div className="modal-header bg-light">
-                                    <h5 className="fw-bold mb-0">Create New Invoice</h5>
+                                    <h5 className="fw-bold mb-0">{editingInvoiceId ? 'Edit Invoice' : 'Checkout & Invoice'}</h5>
                                     <button type="button" className="btn-close" onClick={() => setShowAddModal(false)}></button>
                                 </div>
                                 <div className="modal-body p-4">
                                     <div className="row mb-4">
-                                        <div className="col-md-6">
+                                        <div className="col-md-5">
                                             <label className="form-label fw-bold">Select Client</label>
                                             <select 
                                                 className="form-select border-2" 
@@ -349,28 +376,34 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
                                                 {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                             </select>
                                         </div>
-                                        <div className="col-md-6">
-                                            <label className="form-label fw-bold">Invoice Type</label>
-                                            <div className="d-flex align-items-center h-100 mt-1">
+                                        <div className="col-md-4">
+                                            <label className="form-label fw-bold">Payment Method</label>
+                                            <select 
+                                                className="form-select border-2"
+                                                value={newInvoice.paymentMethod}
+                                                onChange={(e) => setNewInvoice({...newInvoice, paymentMethod: e.target.value})}
+                                            >
+                                                <option value="Cash">Cash</option>
+                                                <option value="Card">Credit/Debit Card</option>
+                                                <option value="Transfer">Bank Transfer</option>
+                                            </select>
+                                        </div>
+                                        <div className="col-md-3">
+                                            <label className="form-label fw-bold">Source</label>
+                                            <div className="mt-2">
                                                 {newInvoice.appointmentId ? (
-                                                    <span className="badge bg-success-subtle text-success border border-success px-3 py-2">
-                                                        <FontAwesomeIcon icon={faCalendarCheck} className="me-2" />
-                                                        Linked to Appt #{newInvoice.appointmentId}
-                                                    </span>
+                                                    <span className="badge bg-success-subtle text-success border border-success">Linked Appt</span>
                                                 ) : (
-                                                    <span className="badge bg-secondary-subtle text-secondary border border-secondary px-3 py-2">
-                                                        <FontAwesomeIcon icon={faUserTag} className="me-2" />
-                                                        Manual / Walk-in
-                                                    </span>
+                                                    <span className="badge bg-secondary-subtle text-secondary border border-secondary">Manual</span>
                                                 )}
                                             </div>
                                         </div>
                                     </div>
 
                                     <div className="d-flex justify-content-between align-items-center mb-2">
-                                        <label className="form-label fw-bold mb-0">Services & Products</label>
+                                        <label className="form-label fw-bold mb-0">Services / Items</label>
                                         <button type="button" className="btn btn-sm btn-primary" onClick={handleAddItem}>
-                                            <FontAwesomeIcon icon={faPlus} className="me-1" /> Add Row
+                                            <FontAwesomeIcon icon={faPlus} className="me-1" /> Add Item
                                         </button>
                                     </div>
                                     
@@ -378,11 +411,10 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
                                         <table className="table table-sm border">
                                             <thead className="table-light">
                                                 <tr className="small text-muted">
-                                                    <th className="ps-3" style={{width: '200px'}}>Select Service</th>
+                                                    <th className="ps-3">Service Quick Pick</th>
                                                     <th>Description</th>
-                                                    <th style={{width: '80px'}}>Qty</th>
-                                                    <th style={{width: '120px'}}>Price</th>
-                                                    <th style={{width: '50px'}} className="text-center"></th>
+                                                    <th style={{width: '100px'}}>Price</th>
+                                                    <th style={{width: '50px'}}></th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -393,9 +425,9 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
                                                                 className="form-select form-select-sm border-0"
                                                                 onChange={(e) => handleItemChange(index, 'serviceSelect', e.target.value)}
                                                             >
-                                                                <option value="">-- Quick Pick --</option>
+                                                                <option value="">-- Select --</option>
                                                                 {services.map(s => (
-                                                                    <option key={s.id} value={s.id}>{s.name}</option>
+                                                                    <option key={s.id} value={s.id}>{s.name} ({s.price})</option>
                                                                 ))}
                                                             </select>
                                                         </td>
@@ -404,11 +436,7 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
                                                                 value={item.description} onChange={(e) => handleItemChange(index, 'description', e.target.value)} />
                                                         </td>
                                                         <td>
-                                                            <input type="number" className="form-control form-control-sm border-0 text-center" min="1" required
-                                                                value={item.quantity} onChange={(e) => handleItemChange(index, 'quantity', e.target.value)} />
-                                                        </td>
-                                                        <td>
-                                                            <input type="number" step="0.01" className="form-control form-control-sm border-0" required
+                                                            <input type="number" step="0.01" className="form-control form-control-sm border-0 fw-bold" required
                                                                 value={item.unitPrice} onChange={(e) => handleItemChange(index, 'unitPrice', e.target.value)} />
                                                         </td>
                                                         <td className="text-center">
@@ -422,14 +450,35 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
                                         </table>
                                     </div>
 
-                                    <div className="text-end mt-3 p-3 bg-light rounded">
-                                        <span className="text-muted me-3">Grand Total:</span>
-                                        <span className="h3 fw-bold text-primary">${calculateTotal().toFixed(2)}</span>
+                                    {/* Breakdown in Edit/Create Mode */}
+                                    <div className="row justify-content-end mt-3">
+                                        <div className="col-md-5">
+                                            <div className="d-flex justify-content-between mb-1 small">
+                                                <span>Subtotal:</span>
+                                                <span>${calculateSubtotal().toFixed(2)}</span>
+                                            </div>
+                                            <div className="input-group input-group-sm mb-2">
+                                                <span className="input-group-text bg-white fw-bold text-danger">Discount</span>
+                                                <input 
+                                                    type="number" 
+                                                    className="form-control" 
+                                                    value={newInvoice.discount} 
+                                                    onChange={(e) => setNewInvoice({...newInvoice, discount: e.target.value})}
+                                                    placeholder="0.00"
+                                                />
+                                            </div>
+                                            <div className="text-end p-3 bg-light rounded border">
+                                                <span className="text-muted me-3">Grand Total:</span>
+                                                <span className="h4 fw-bold text-primary">${calculateTotal().toFixed(2)}</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="modal-footer border-0">
                                     <button type="button" className="btn btn-outline-secondary px-4" onClick={() => setShowAddModal(false)}>Cancel</button>
-                                    <button type="submit" className="btn btn-primary px-5 fw-bold">Save Invoice</button>
+                                    <button type="submit" className="btn btn-success px-5 fw-bold">
+                                        {editingInvoiceId ? 'Save Changes' : 'Complete & Save'}
+                                    </button>
                                 </div>
                             </form>
                         </div>
@@ -437,64 +486,99 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
                 </div>
             )}
 
-            {/* VIEW RECEIPT MODAL */}
+            {/* VIEW/PRINT RECEIPT MODAL */}
             {selectedInvoice && (
                 <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1060 }}>
                     <div className="modal-dialog modal-md modal-dialog-centered">
-                        <div className="modal-content border-0 shadow-lg">
-                            <div className="modal-header border-0 pb-0">
+                        <div className={`modal-content ${styles.receiptCard} print-section`}>
+                            
+                            {/* Close Button - Hidden on Print */}
+                            <div className={`modal-header ${styles.receiptHeaderNoBorder} no-print`}>
                                 <button type="button" className="btn-close" onClick={() => setSelectedInvoice(null)}></button>
                             </div>
-                            <div className="modal-body px-4 pb-4">
-                                <div className="text-center mb-4">
-                                    <div className="h4 fw-bold text-uppercase mb-1">Receipt</div>
-                                    <div className="text-muted small">Invoice #: {selectedInvoice.invoiceNumber}</div>
-                                    {selectedInvoice.appointmentId && (
-                                        <div className="badge bg-light text-dark border mt-2">
-                                            <FontAwesomeIcon icon={faCalendarCheck} className="me-1" />
-                                            Linked to Appointment #{selectedInvoice.appointmentId}
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="row mb-4">
-                                    <div className="col-6">
-                                        <div className="text-muted small">Billed To:</div>
-                                        <div className="fw-bold">{selectedInvoice.client?.name}</div>
-                                        <div className="small">{selectedInvoice.client?.email}</div>
+
+                            <div className={styles.receiptBody}>
+                                {/* Header: Logo & Branding */}
+                                <div className={styles.receiptBrandSection}>
+                                    <div className={styles.brandInfo}>
+                                        <h2 className={styles.businessName}>My Salon</h2>
+                                        <p className={styles.businessAddress}>123 Beauty Lane, Suite 400<br/>Contact: +1 (555) 000-1111</p>
                                     </div>
-                                    <div className="col-6 text-end">
-                                        <div className="text-muted small">Date Issued:</div>
-                                        <div className="fw-bold">{new Date(selectedInvoice.issueDate).toLocaleDateString()}</div>
-                                        <div className={`small fw-bold ${selectedInvoice.status === 'Paid' ? 'text-success' : 'text-warning'}`}>
-                                            Status: {selectedInvoice.status}
-                                        </div>
+                                    <div className={styles.receiptBadge}>
+                                        <span className={selectedInvoice.status === 'Paid' ? styles.paidBadge : styles.pendingBadge}>
+                                            {selectedInvoice.status}
+                                        </span>
                                     </div>
                                 </div>
-                                <table className="table table-sm border-top border-bottom">
+
+                                <hr className={styles.receiptDivider} />
+
+                                {/* Meta Data: Client & Invoice Info */}
+                                <div className={styles.receiptMetaGrid}>
+                                    <div className={styles.metaColumn}>
+                                        <span className={styles.metaLabel}>BILLED TO</span>
+                                        <div className={styles.metaValueBold}>{selectedInvoice.client?.name}</div>
+                                        <div className={styles.metaValue}>{selectedInvoice.client?.phone}</div>
+                                    </div>
+                                    <div className={`${styles.metaColumn} text-end`}>
+                                        <span className={styles.metaLabel}>INVOICE DETAILS</span>
+                                        <div className={styles.metaValue}><strong>ID:</strong> {selectedInvoice.invoiceNumber}</div>
+                                        <div className={styles.metaValue}><strong>Date:</strong> {new Date(selectedInvoice.issueDate).toLocaleDateString()}</div>
+                                        <div className={styles.metaValue}><strong>Method:</strong> {selectedInvoice.paymentMethod}</div>
+                                    </div>
+                                </div>
+
+                                {/* Items Table */}
+                                <table className={styles.receiptTable}>
                                     <thead>
-                                        <tr className="text-muted small">
-                                            <th>Description</th>
-                                            <th className="text-center">Qty</th>
-                                            <th className="text-end">Price</th>
+                                        <tr>
+                                            <th>Service Description</th>
+                                            <th className="text-end">Amount</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {selectedInvoice.items?.map((item, idx) => (
                                             <tr key={idx}>
-                                                <td className="py-2">{item.description}</td>
-                                                <td className="py-2 text-center">{item.quantity}</td>
-                                                <td className="py-2 text-end">${item.unitPrice.toFixed(2)}</td>
+                                                <td>{item.description}</td>
+                                                <td className="text-end">${item.unitPrice.toFixed(2)}</td>
                                             </tr>
                                         ))}
                                     </tbody>
                                 </table>
-                                <div className="d-flex justify-content-between align-items-center mt-3 px-2">
-                                    <div className="h5 fw-bold mb-0">Total Amount</div>
-                                    <div className="h4 fw-bold text-primary mb-0">${selectedInvoice.totalAmount.toFixed(2)}</div>
+
+                                {/* Calculation Summary */}
+                                <div className={styles.receiptSummary}>
+                                    <div className={styles.summaryRow}>
+                                        <span>Subtotal</span>
+                                        <span>${(selectedInvoice.totalAmount + selectedInvoice.discount).toFixed(2)}</span>
+                                    </div>
+                                    
+                                    {selectedInvoice.discount > 0 && (
+                                        <div className={`${styles.summaryRow} ${styles.discountText}`}>
+                                            <span>Discount Applied</span>
+                                            <span>-${selectedInvoice.discount.toFixed(2)}</span>
+                                        </div>
+                                    )}
+
+                                    <div className={styles.totalRow}>
+                                        <span>Total Amount</span>
+                                        <span>${selectedInvoice.totalAmount.toFixed(2)}</span>
+                                    </div>
+                                </div>
+
+                                {/* Footer */}
+                                <div className={styles.receiptFooter}>
+                                    <p>Thank you for choosing My Salon!</p>
+                                    <small>Please keep this receipt for your records.</small>
                                 </div>
                             </div>
-                            <div className="modal-footer border-0">
-                                <button className="btn btn-light w-100" onClick={() => window.print()}>Print Receipt</button>
+
+                            {/* Print Action - Hidden on Print */}
+                            <div className="modal-footer border-0 no-print">
+                                <button className={styles.printBtn} onClick={() => window.print()}>
+                                    <FontAwesomeIcon icon={faFileInvoiceDollar} className="me-2" />
+                                    Print Official Receipt
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -511,6 +595,7 @@ const InvoicesComponent = ({ user, initialInvoices }) => {
                                     <FontAwesomeIcon icon={faTrashAlt} size="3x" />
                                 </div>
                                 <h5 className="fw-bold">Delete Invoice?</h5>
+                                <p className="small text-muted">This action cannot be undone.</p>
                                 <div className="d-flex gap-2">
                                     <button className="btn btn-light flex-fill" onClick={() => setDeletingInvoiceId(null)}>Cancel</button>
                                     <button className="btn btn-danger flex-fill" onClick={handleDeleteInvoice}>Delete</button>

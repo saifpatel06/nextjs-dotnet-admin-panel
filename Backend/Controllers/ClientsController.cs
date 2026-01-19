@@ -23,7 +23,11 @@ namespace AdminPanelAPI.Controllers
         [HttpGet]
         public async Task<ActionResult<ApiResponse<IEnumerable<Client>>>> GetClients()
         {
-            var clients = await _context.Clients.ToListAsync();
+            // Sorted by newest first so Admin sees recent clients immediately
+            var clients = await _context.Clients
+                .OrderByDescending(c => c.CreatedAt)
+                .ToListAsync();
+
             return Ok(new ApiResponse<IEnumerable<Client>> 
             { 
                 Success = true, 
@@ -55,17 +59,19 @@ namespace AdminPanelAPI.Controllers
 
         // POST: api/Clients
         [HttpPost]
-        public async Task<ActionResult<ApiResponse<Client>>> AddClient(ClientCreateDto dto)
+        public async Task<ActionResult<ApiResponse<Client>>> AddClient(ClientUpsertDto dto)
         {
             try 
             {
                 var client = new Client
                 {
                     Name = dto.Name,
-                    Email = dto.Email,
-                    Company = dto.Company,
                     Phone = dto.Phone,
-                    Status = "Active" 
+                    Status = dto.Status ?? "Active",
+                    Gender = dto.Gender,
+                    Address = dto.Address,
+                    InternalNotes = dto.InternalNotes,
+                    CreatedAt = DateTime.UtcNow // Ensure server time is used
                 };
 
                 _context.Clients.Add(client);
@@ -91,7 +97,7 @@ namespace AdminPanelAPI.Controllers
 
         // PUT: api/Clients/5
         [HttpPut("{id}")]
-        public async Task<ActionResult<ApiResponse<Client>>> UpdateClient(int id, ClientCreateDto dto)
+        public async Task<ActionResult<ApiResponse<Client>>> UpdateClient(int id, ClientUpsertDto dto)
         {
             try
             {
@@ -105,11 +111,16 @@ namespace AdminPanelAPI.Controllers
                     });
                 }
 
-                // Update only the fields allowed by the DTO
+                // Update fields
                 client.Name = dto.Name;
-                client.Email = dto.Email;
-                client.Company = dto.Company;
                 client.Phone = dto.Phone;
+                client.Status = dto.Status;
+                client.Gender = dto.Gender;
+                client.Address = dto.Address;
+                client.InternalNotes = dto.InternalNotes;
+                
+                // Set the updated timestamp
+                client.UpdatedAt = DateTime.UtcNow;
 
                 await _context.SaveChangesAsync();
 
