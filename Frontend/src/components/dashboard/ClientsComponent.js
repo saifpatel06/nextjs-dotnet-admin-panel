@@ -10,7 +10,6 @@ const ClientsComponent = ({ user, initialClients }) => {
   const [editingClient, setEditingClient] = useState(null);
   const [deletingClientId, setDeletingClientId] = useState(null);
 
-  // UPDATED: Matches your new schema
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -24,6 +23,14 @@ const ClientsComponent = ({ user, initialClients }) => {
     c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.phone?.includes(searchTerm)
   );
+
+  // HELPER: Clean phone for Indian WhatsApp (strips extra characters but keeps 91)
+  const formatIndianPhone = (val) => {
+    let cleaned = val.replace(/\D/g, ''); // Remove all non-digits
+    // If it starts with 0, remove it (common in Indian typing)
+    if (cleaned.startsWith('0')) cleaned = cleaned.substring(1);
+    return cleaned;
+  };
 
   const handleOpenAddModal = () => {
     setEditingClient(null);
@@ -46,6 +53,16 @@ const ClientsComponent = ({ user, initialClients }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    const cleanNumber = formData.phone.replace(/\D/g, '');
+    
+    if (cleanNumber.length !== 10 && cleanNumber.length !== 12) {
+        return notify.error("Invalid Phone! Please enter a 10-digit mobile number.");
+    }
+
+    const finalPhone = cleanNumber.length === 10 ? `91${cleanNumber}` : cleanNumber;
+    const payload = { ...formData, phone: finalPhone };
+
     const url = 'http://localhost:5085/api/Clients';
     const method = editingClient ? 'PUT' : 'POST';
     const finalUrl = editingClient ? `${url}/${editingClient.id}` : url;
@@ -59,7 +76,7 @@ const ClientsComponent = ({ user, initialClients }) => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${user.token}`
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       const result = await response.json();
@@ -69,7 +86,7 @@ const ClientsComponent = ({ user, initialClients }) => {
         if (editingClient) {
           setClients(clients.map(c => c.id === editingClient.id ? result.data : c));
         } else {
-          setClients([result.data, ...clients]); // Newest at top
+          setClients([result.data, ...clients]);
         }
         setShowModal(false);
         notify.success("Client saved successfully!"); 
@@ -144,7 +161,10 @@ const ClientsComponent = ({ user, initialClients }) => {
                         <div className="fw-bold">{client.name}</div>
                         <small className="text-muted">{client.address || 'No address'}</small>
                     </td>
-                    <td>{client.phone}</td>
+                    <td>
+                      <span className="text-success small me-1"></span>
+                      {client.phone}
+                    </td>
                     <td>{client.gender || '-'}</td>
                     <td>
                       <span className={`badge rounded-pill ${client.status === 'Active' ? 'bg-success' : 'bg-secondary'}`}>
@@ -177,11 +197,21 @@ const ClientsComponent = ({ user, initialClients }) => {
                   <div className="row">
                     <div className="col-md-6 mb-3">
                         <label className="form-label small text-muted">Full Name *</label>
-                        <input type="text" className="form-control" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} required />
+                        <input type="text" className="form-control" placeholder="Arjun Mehta" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} required />
                     </div>
                     <div className="col-md-6 mb-3">
-                        <label className="form-label small text-muted">Phone Number *</label>
-                        <input type="text" className="form-control" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} required />
+                        <label className="form-label small text-muted">Phone Number (WhatsApp) *</label>
+                        <div className="input-group">
+                          <span className="input-group-text bg-light text-success fw-bold">+91</span>
+                          <input 
+                            type="text" 
+                            className="form-control" 
+                            placeholder="9876543210" 
+                            value={formData.phone.startsWith('91') ? formData.phone.substring(2) : formData.phone} 
+                            onChange={(e) => setFormData({...formData, phone: formatIndianPhone(e.target.value)})} 
+                            required 
+                          />
+                        </div>
                     </div>
                   </div>
                   
@@ -206,12 +236,12 @@ const ClientsComponent = ({ user, initialClients }) => {
 
                   <div className="mb-3">
                     <label className="form-label small text-muted">Address (Optional)</label>
-                    <input type="text" className="form-control" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />
+                    <input type="text" className="form-control" placeholder="Bandra West, Mumbai" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />
                   </div>
 
                   <div className="mb-3">
                     <label className="form-label small text-muted">Internal Notes (Private)</label>
-                    <textarea className="form-control" rows="3" value={formData.internalNotes} onChange={(e) => setFormData({...formData, internalNotes: e.target.value})} placeholder="E.g. Customer prefers morning slots..."></textarea>
+                    <textarea className="form-control" rows="3" value={formData.internalNotes} onChange={(e) => setFormData({...formData, internalNotes: e.target.value})} placeholder="E.g. Regular for hair spa..."></textarea>
                   </div>
                 </div>
                 <div className="modal-footer border-top-0">
