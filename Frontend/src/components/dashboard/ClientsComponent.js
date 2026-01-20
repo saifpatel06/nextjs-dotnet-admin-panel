@@ -202,11 +202,11 @@ const ClientsComponent = ({ user, initialClients }) => {
                     <div className="col-md-6 mb-3">
                         <label className="form-label small text-muted">Phone Number (WhatsApp) *</label>
                         <div className="input-group">
-                          <span className="input-group-text bg-light text-success fw-bold">+91</span>
+                          <span className="input-group-text fw-bold">+91</span>
                           <input 
                             type="text" 
                             className="form-control" 
-                            placeholder="9876543210" 
+                            placeholder="" 
                             value={formData.phone.startsWith('91') ? formData.phone.substring(2) : formData.phone} 
                             onChange={(e) => setFormData({...formData, phone: formatIndianPhone(e.target.value)})} 
                             required 
